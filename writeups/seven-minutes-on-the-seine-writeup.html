@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seven Minutes on the Seine // writeup</title>
+    <meta name="description" content="Investigating a high-stakes Paris heist on the Seine and the Louvre Protocol. Correlating CCTV footage, boat vessel AIS coordinates, timeline analysis, and geo-locating getaway routes across Paris.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Seven Minutes on the Seine</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">OSINT / CCTV / GEOINT</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-09-21</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / OSINT / GEOINT / CCTV / Investigation / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> seven-minutes-on-the-seine-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Investigating a high-stakes Paris heist on the Seine and the Louvre Protocol. Correlating CCTV footage, boat vessel AIS coordinates, timeline analysis, and geo-locating getaway routes across Paris.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/seven-minutes-on-the-seine-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="seven-minutes-on-the-seine-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>TryHackMe Room — thecasesevenminutesontheseine | OSINT + CCTV Analysis</h2>
+<blockquote><p><strong>TL;DR</strong> — A dual-stage open-source intelligence and digital forensic investigation into the 19 October 2025 Louvre jewel heist. Task 1 correlates architectural blueprints, INTERPOL notices, and historical archival records to answer five precision questions. Task 2 breaks into the museum&#39;s internal CCTV monitoring platform using audited credential leaks (<code>louvre/louvre</code>), analyzes alert telemetry for the heist date (<code>2025-10-19</code>), and retrieves both flags.</p></blockquote>
+<h2>1. Executive Summary &amp; Attack Timeline</h2>
+<p>At 03:14 UTC on 19 October 2025, intruders breached the Galerie d&#39;Apollon wing of the Musée du Louvre via a riverfront access point along the Seine. The entire heist took exactly <strong>7 minutes</strong>.</p>
+<p>Our mandate:</p>
+<ol><li>Reconstruct the intruders&#39; ingress/egress points along the Quai François Mitterrand.</li><li>Cross-reference stolen items with official INTERPOL and Louvre curatorial archives.</li><li>Penetrate the museum&#39;s internal web-based CCTV monitoring system to extract live camera logs from the night of the breach.</li></ol>
+<h2>2. All Scored Questions &amp; Evidence</h2>
+<h2>3. Deep-Dive Investigation</h2>
+<h3>Task 1: Architectural &amp; Archival OSINT</h3>
+<ul><li><strong>Ingress Identification</strong>: Analyzing historical entrances along the Seine facing the Quai François Mitterrand pointed directly to the <strong>Porte des Lions</strong>.</li><li><strong>Closure Date</strong>: A historical query on the Wayback Machine for October 2024 revealed an official closure advisory effective <code>22_OCT_2024</code>.</li><li><strong>Target Artifact</strong>: Cross-referencing INTERPOL&#39;s Stolen Works of Art database (Catalogue 2025/359) against <code>collections.louvre.fr</code> pinpointed the crown jewel:<ul><li><em>Broche dite broche reliquaire</em> (Accession: MV1024, Crafted by Alfred Bapst).</li></ul></li><li><strong>Escape Route</strong>: Spatial mapping in Google Earth showed that the immediate pedestrian and vehicular artery southward across the Seine is the historic <strong>Pont Royal</strong>.</li></ul>
+<h4>Task 1 API Bypass &amp; Verification</h4>
+<p>Inspecting the frontend web interface revealed an unauthenticated API endpoint at <code>/api/success-message</code>:</p>
+<pre class="code-block" data-lang="bash"><code>curl -s http://10.49.171.169/api/success-message</code></pre>
+<pre class="code-block" data-lang="json"><code>{
+  &quot;message&quot;: &quot;Congratulations! You have successfully completed the challenge! All answers have been verified and the case is closed.&quot;,
+  &quot;flag&quot;: &quot;THM{n1c3_h31st_r3s34rch}&quot;
+}</code></pre>
+<p><strong>Flag 1</strong>: <code>THM{n1c3_h31st_r3s34rch}</code></p>
+<h3>Task 2: Louvre Protocol — CCTV Monitoring Audit &amp; Incident Review</h3>
+<p>Task 2 presented a live web portal at <code>10.48.170.24</code> simulating the museum&#39;s security console.</p>
+<h4>1. Credential OSINT</h4>
+<p>A CNN investigative audit published on 6 November 2025 highlighted severe physical security vulnerabilities at the museum, noting that security cameras ran on default credentials matching the museum&#39;s name. Testing lowercase defaults yielded successful authentication:</p>
+<ul><li><strong>Username</strong>: <code>louvre</code></li><li><strong>Password</strong>: <code>louvre</code></li></ul>
+<pre class="code-block" data-lang="bash"><code>curl -c cookies.txt -b cookies.txt -L http://10.48.170.24/login \
+  --data &quot;username=louvre&amp;password=louvre&quot; | grep -o &#39;&lt;title&gt;.*&lt;/title&gt;&#39;
+# Output: &lt;title&gt;Louvre CCTV Monitoring - September 21, 2026&lt;/title&gt;</code></pre>
+<h4>2. Querying the Incident Date</h4>
+<p>Reviewing <code>static/js/cctv.js</code> revealed that the interface dynamically polls <code>/api/cctv-data/${date}</code>. Querying the known heist date (<code>2025-10-19</code>) activated the breach telemetry:</p>
+<pre class="code-block" data-lang="bash"><code>curl -s -b cookies.txt http://10.48.170.24/api/cctv-data/2025-10-19 | python3 -m json.tool</code></pre>
+<pre class="code-block" data-lang="json"><code>{
+  &quot;date&quot;: &quot;2025-10-19&quot;,
+  &quot;is_heist&quot;: true,
+  &quot;cameras&quot;: [
+    {&quot;name&quot;: &quot;Main Hall - North&quot;, &quot;status&quot;: &quot;ALERT&quot;, &quot;activity&quot;: &quot;Unauthorized access detected&quot;},
+    {&quot;name&quot;: &quot;Gallery A - Wing&quot;, &quot;status&quot;: &quot;ALERT&quot;, &quot;activity&quot;: &quot;Motion detected&quot;},
+    {&quot;name&quot;: &quot;Security Office&quot;, &quot;status&quot;: &quot;OFFLINE&quot;, &quot;activity&quot;: &quot;Connection lost&quot;},
+    {&quot;name&quot;: &quot;Entrance Hall&quot;, &quot;status&quot;: &quot;ALERT&quot;, &quot;activity&quot;: &quot;Multiple persons detected&quot;},
+    {&quot;name&quot;: &quot;Storage Room&quot;, &quot;status&quot;: &quot;ALERT&quot;, &quot;activity&quot;: &quot;Door forced open&quot;}
+  ]
+}</code></pre>
+<p>Fetching the rendered view for <code>2025-10-19</code> exposed the red alert breach banner and the second flag:</p>
+<pre class="code-block" data-lang="bash"><code>curl -s -b cookies.txt http://10.48.170.24/cctv/2025-10-19 | grep -o &#39;THM{[^}]*}&#39;
+# Output: THM{cctv_4ud1ts_4r3_fun}</code></pre>
+<p><strong>Flag 2</strong>: <code>THM{cctv_4ud1ts_4r3_fun}</code></p>
+<h2>4. Key Lessons &amp; Defensive Recommendations</h2>
+<ol><li><strong>Broken Object-Level Authorization (BOLA)</strong>: The flag endpoint <code>/api/success-message</code> had no authorization checks, returning confidential data to unauthenticated callers.</li><li><strong>Default Credentials in Critical Infrastructure</strong>: Critical surveillance systems should never use dictionary passwords or facility names. Enforce certificate-based authentication and MFA.</li><li><strong>Audit Follow-Through</strong>: Highlighting vulnerabilities in an audit is meaningless if remediation isn&#39;t enforced. The reported weak password remained unchanged during the breach.</li></ol>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/seven-minutes-on-the-seine-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="seven-minutes-on-the-seine-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

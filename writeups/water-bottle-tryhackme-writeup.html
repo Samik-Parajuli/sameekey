@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Bottle // writeup</title>
+    <meta name="description" content="The enumeration steps, the vulnerable component and the exploitation path on Water Bottle, in the order you actually do them.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Water Bottle</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-easy">Easy</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-12</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Easy</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> water-bottle-tryhackme-writeup.md</span>
+                </div>
+                <p class="writeup-summary">The enumeration steps, the vulnerable component and the exploitation path on Water Bottle, in the order you actually do them.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/water-bottle-tryhackme-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="water-bottle-tryhackme-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <pre class="code-block" data-lang="bash"><code>Platform: TryHackMe  |  Category: OSINT  |  Difficulty: Easy – Medium  |  Room: waterbottle</code></pre>
+<h2>1. Challenge Description</h2>
+<p>The scenario: after returning to my hometown, I needed a water refill from a station I frequently used until 2014, but I have forgotten its name and contact number. I only remember that the contact number is twelve digits and starts with 63922. While driving near Boni Avenue, a new water refilling establishment now stands where the original station used to be. The task is to find the name and contact number of the original water station.</p>
+<pre class="code-block" data-lang="bash"><code>Flag format: THM{station_name_in_lowercase_contact_number}</code></pre>
+<h2>2. Analysing the Clues</h2>
+<p>The number prefix tells us a lot before we even search: •63922 = Philippines country code 63 + Globe Telecom mobile prefix 922 — so the full number is</p>
+<pre class="code-block" data-lang="bash"><code>63-922-XXX-XXXX.</code></pre>
+<p>•Location: Boni Avenue, Mandaluyong City, Metro Manila — the station was active until around</p>
+<h2>2014 and has since been replaced.</h2>
+<p>•The masked answer format (star count) hints: the name appears to be 8 characters and the number</p>
+<h2>3. Step-by-Step Investigation</h2>
+<h3>Step 1 — Anchor points on Google Maps</h3>
+<p>The room provides two Google Maps short links that pin down the exact location: Link What it shows Street View from April 2014 @ 14.57887, 121.0318302 — pin now reads “Water Refillin</p>
+<pre class="code-block" data-lang="bash"><code>maps.app.goo.gl/4H17ZWF5nccRRr2s8</code></pre>
+<p>Water JAM Water Refilling Station @ 14.578967, 121.032311 — the NEW station</p>
+<pre class="code-block" data-lang="bash"><code>maps.app.goo.gl/SiALJgGf29jjGJt69</code></pre>
+<p>Both coordinates are roughly 15 metres apart — essentially the same spot. Water JAM is the new establishment that replaced the original station.</p>
+<h3>Step 2 — Recovering the 2014 imagery</h3>
+<p>Decoding the first Maps link redirect gives the Street View panoid and capture date:</p>
+<pre class="code-block" data-lang="bash"><code>panoid = NHB-mXd1toBgiIVOouSCkQ
+date   = 20140401   (April 2014)</code></pre>
+<p>Using the Street View Pixels API to pull thumbnails from that panorama at different yaw angles (east, south-west) reveals a yellow and blue structure across the Boni Avenue median — matching Blue Cube Water Re-Filling Station at 425 Pulog cor. Boni Ave, Barangay Malamig (active circa 2012, per its Foursquare listing).</p>
+<h3>Step 3 — Searching business directories</h3>
+<p>The 2014 era also left footprints in older directories (Waze, Cybo, Foursquare, contact.page, Scribd barangay lists). The candidates found:</p>
+<p>Station Address Contact Matches? Water Market Refilling Station 19 Domingo M. Guevara, Mandaluyong 0922 874 6887 → 639228746887 12 digits, 63922  — but name has 12 chars Blue Cube Water Re-Filling 425 Pulog cor. Boni Ave, Malamig(02) 497 2712 (landline) 8-char name  — but no 63922 mobile Aquabest — Mandaluyong, Boni 31 Mayon St, Boni, Mandaluyong +63 922 872 1228 → 639228721228 12 digits  · 63922  · 8 chars  Grandeur Water Station 705 Boni Ave, Malamig (02) 533 4069 (landline) No matching mobile number</p>
+<h3>Step 4 — Confirming the match: Aquabest</h3>
+<p>The Aquabest Boni branch contact page (contact.page) lists: •Address: Unit D, Villa Maria Apartment, 31 Mayon Street, Boni, Mandaluyong City</p>
+<pre class="code-block" data-lang="bash"><code>•Mobile: +63 922 872 1228→63-922-872-1228 = 12 digits starting with 63922
+•Name aquabest = 8 characters</code></pre>
+<p>Aquabest is a long-running Philippine franchise (active well before 2014), and its Boni branch was later replaced by Water JAM at the same location — matching the challenge story perfectly.</p>
+<h2>4. The Flag</h2>
+<h3>THM{aquabest_639228721228}</h3>
+<h2>5. Tools Used</h2>
+<p>Google Maps (short-link decoding + historical Street View) · Google Street View Pixels API · Waze live map · Foursquare venue listings · contact.page · Scribd (Kalokal Barangay Highway Hills directory) · Cybo · PuertoParrot</p>
+<h2>6. What Didn’t Work &amp; Lessons Learned</h2>
+<p>•Water Market Refilling Station — phone format was perfect (639228746887) but the name is 12 characters, which does not fit the 8-character answer slot. •Blue Cube Water Re-Filling Station — correct name length and visible in the 2014 Street View, but only ever had a landline, no 63922 mobile number. •Count the stars in the masked answer format — TryHackMe often leaks the answer&#39;s length. •Directory sites like contact.page keep numbers complete in international format even when partially masked — always verify the full number. •Old Street View panoramas can be re-fetched by panoid/date via Google&#39;s thumbnail API. •A franchise brand may be gone from a location while the chain still exists — don&#39;t assume “still listed” means “still there.” Writeup generated for personal study purposes. Solve the room yourself before reading this — OSINT rooms are the most fun when you don’t peek.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/water-bottle-tryhackme-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="water-bottle-tryhackme-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

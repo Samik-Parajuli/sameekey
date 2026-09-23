@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Impossible Challenge // writeup</title>
+    <meta name="description" content="A password-protected ZIP whose password is hidden in zero-width characters on the room page itself, and a visible ciphertext that exists purely to waste your time.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>The Impossible Challenge</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Cryptography / Steganography</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-14</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Cryptography / Steganography / Zero-Width / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> the-impossible-challenge-writeup.md</span>
+                </div>
+                <p class="writeup-summary">A password-protected ZIP whose password is hidden in zero-width characters on the room page itself, and a visible ciphertext that exists purely to waste your time.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/the-impossible-challenge-writeup.md" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <blockquote><p><strong>TL;DR</strong> — The challenge ships a <strong>password-protected ZIP</strong> whose password is hidden using <strong>zero-width character steganography</strong> in the room description itself. The visible ciphertext (<code>qo qt q</code> r6 ...`) is a <strong>red herring / rabbit hole</strong> that only decodes to a <em>hint</em> pointing you back to the room page. Extract the hidden text from &quot;Hmm&quot;, get the ZIP password, unzip, and read the flag.</p></blockquote>
+<blockquote><p>Download the file, and find the Flag!</p></blockquote>
+<p>The room gives you:</p>
+<ul><li>A link to download <code>Impossible.zip</code> (password-protected, contains <code>flag.txt</code>).</li><li>A block of cryptic text:</li></ul>
+<pre class="code-block" data-lang="text"><code>qo qt q` r6 ro su pn s_ rn r6 p6 s_ q2 ps qq rs rp ps rt r4 pu pt qn r4 rq pt q` so pu ps r4 sq pu ps q2 su rn on oq o_ pu ps ou r5 pu pt r4 sr rp qt pu rs q2 qt r4 r4 ro su pq o5</code></pre>
+<ul><li>The task:</li></ul>
+<blockquote><p>flag is in the format THM{} Answer format: <code>*<strong>{</strong><strong>_</strong>*<strong>_</strong>******<strong>_</strong>**}</code></p></blockquote>
+<h2>2. First Look at the File</h2>
+<pre class="code-block" data-lang="bash"><code>file Impossible_1587053656818.zip</code></pre>
+<pre class="code-block" data-lang="text"><code>Impossible_1587053656818.zip: Zip archive data, at least v2.0 to extract, compression method=deflate</code></pre>
+<p>It&#39;s a normal ZIP. Let&#39;s list its contents:</p>
+<pre class="code-block" data-lang="bash"><code>unzip -l Impossible_1587053656818.zip</code></pre>
+<pre class="code-block" data-lang="text"><code>Archive:  Impossible_1587053656818.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+       91  2020-04-16 12:05   flag.txt</code></pre>
+<p>One file: <code>flag.txt</code> (91 bytes — the right size for a <code>THM{}</code> flag line). But when we try to extract it, we get asked for a <strong>password</strong>:</p>
+<pre class="code-block" data-lang="bash"><code>unzip Impossible_1587053656818.zip</code></pre>
+<pre class="code-block" data-lang="text"><code>Archive:  Impossible_1587053656818.zip
+[Impossible_1587053656818.zip] flag.txt password:
+   skipping: flag.txt                incorrect password</code></pre>
+<p>So the puzzle is: <strong>find the ZIP password</strong>.</p>
+<h2>3. Analysing the Visible Ciphertext (the Rabbit Hole)</h2>
+<p>The block of <code>qo qt q</code> r6 ...` text <em>looks</em> like a layered encoding. Let&#39;s decode it anyway, because it&#39;s the most obvious lead.</p>
+<h3>3.1 ROT13</h3>
+<p>Rotating the letters by 13:</p>
+<pre class="code-block" data-lang="text"><code>db dg d` e6 eb fh ca f_ ea e6 c6 f_ d2 cf dd ef ec cf eg e4 ch cg da e4 ed cg d` fb ch cf e4 fd ch cf d2 fh ea ba bd b_ ch cf bh e5 ch cg e4 fe ec dg ch ef d2 dg e4 e4 eb fh cd b5</code></pre>
+<h3>3.2 ROT47</h3>
+<p>Applying ROT47 (shifts all printable ASCII, including digits/symbols) on top:</p>
+<pre class="code-block" data-lang="text"><code>dbdgdf0e2ebfhcaf7ea e2c6f7d2cf...</code></pre>
+<p>Wait — that looks messy. ROT13 first (which moves letters), then <strong>ROT47</strong>:</p>
+<pre class="code-block" data-lang="text"><code>db dg d` e2 eb fh ca f5 ea e2 c6 f5 d2 cf dd ef ec cf eg e4 ch cg da e4 ed cg d` fb ch cf e4 fd ch cf d2 fh ea ba bd b5 ch cf bh e5 ch cg e4 fe ec dg ch ef d2 dg e4 e4 eb fh cd b5</code></pre>
+<h3>3.3 From Hex</h3>
+<p>That output is now all valid hex characters. Converting from hex:</p>
+<pre class="code-block" data-lang="text"><code>dbdg df0e 2ebf hca f5eae2 c6f5...</code></pre>
+<h3>3.4 From Base64</h3>
+<p>The hex decodes to a Base64-looking blob, which decodes to:</p>
+<pre class="code-block" data-lang="text"><code>It&#39;s inside the text, in front of your eyes!</code></pre>
+<blockquote><p><strong>The message is just a HINT.</strong> It says the answer is hiding &quot;inside the text, in front of your eyes&quot; — i.e. on the <strong>room page itself</strong>, not in the cipher. This ciphertext is a dead end and was placed there to waste your time.</p></blockquote>
+<p>The full CyberChef recipe: <code>ROT13</code> → <code>ROT47</code> → <code>From Hex</code> → <code>From Base64</code>.</p>
+<h2>4. Inspecting the Room Page Source</h2>
+<p>The hint says the answer is &quot;in front of your eyes&quot;. So go back to the challenge description on TryHackMe and <strong>view the page source</strong>.</p>
+<p>Right below the challenge title there&#39;s a word that looks like <code>Hmm</code>:</p>
+<pre class="code-block" data-lang="html"><code>&lt;h2 class=&quot;text-center&quot;&gt;Hmm&lt;/h2&gt;</code></pre>
+<p>But if you look at the raw HTML / copy-paste it into a hex viewer, you&#39;ll notice the string is <strong>not plain text</strong>. It contains hidden Unicode characters:</p>
+<pre class="code-block" data-lang="text"><code>\uFEFF\u200C\u200C Hmm \u200C\u200C\u200C\u200C ...</code></pre>
+<p>The characters involved:</p>
+<p>These invisible characters are exactly what <strong>zero-width character steganography</strong> uses to hide text inside other text.</p>
+<h2>5. Zero-Width Character Steganography</h2>
+<p>Steganography = hiding data <em>inside</em> another medium. Here, bits are hidden inside an innocent string (<code>Hmm</code>) by inserting invisible Unicode characters between the visible letters.</p>
+<ul><li>A <strong>Zero Width Joiner (ZWJ, <code>\u200D</code>)</strong> encodes a binary <code>1</code>.</li><li>A <strong>Zero Width Non-Joiner (ZWNJ, <code>\u200C</code>)</strong> encodes a binary <code>0</code>.</li></ul>
+<p>The pattern of these invisible characters, grouped into 8-bit chunks and decoded to ASCII, reveals the hidden message.</p>
+<h3>Decode it</h3>
+<p>Copy the full <code>Hmm</code> string from the room page (exactly as rendered/from source) and paste it into a zero-width decoder:</p>
+<ul><li><strong>https://330k.github.io/misc_tools/unicode_steganography.html</strong></li></ul>
+<p>Decoding gives us:</p>
+<pre class="code-block" data-lang="text"><code>hahaezpz</code></pre>
+<p>That&#39;s the <strong>ZIP password</strong>.</p>
+<h2>6. Unzipping With the Password</h2>
+<pre class="code-block" data-lang="bash"><code>unzip Impossible_1587053656818.zip</code></pre>
+<pre class="code-block" data-lang="text"><code>Archive:  Impossible_1587053656818.zip
+[Impossible_1587053656818.zip] flag.txt password:</code></pre>
+<p>Enter <code>hahaezpz</code>:</p>
+<pre class="code-block" data-lang="text"><code>inflating: flag.txt</code></pre>
+<h2>7. The Flag</h2>
+<pre class="code-block" data-lang="bash"><code>cat flag.txt</code></pre>
+<pre class="code-block" data-lang="text"><code>You have solved the Impossible Challenge! Here is your flag THM{Zero_Width_Characters_EZPZ}</code></pre>
+<blockquote><p><strong>Flag</strong> 🏳️ — <code>THM{Zero_Width_Characters_EZPZ}</code></p></blockquote>
+<p>This fits the answer format perfectly:</p>
+<pre class="code-block" data-lang="text"><code>***{****_*****_**********_****}
+THM{Zero_Width_Characters_EZPZ}</code></pre>
+<h2>8. Step-by-Step Summary</h2>
+<h2>9. Key Takeaways</h2>
+<ol><li><strong>Always check the page source / room description.</strong> CTF &quot;ciphertext&quot; is not always the</li></ol>
+<p>real vector — sometimes the answer is hidden <em>in plain sight</em> using invisible characters.</p>
+<ol><li><strong>Zero-width steganography</strong> (<code>\u200B</code>, <code>\u200C</code>, <code>\u200D</code>) lets you hide arbitrary text in</li></ol>
+<p>any visible string without changing what the user sees. Tools like <a href="https://330k.github.io/misc_tools/unicode_steganography.html" target="_blank" rel="noopener">330k.github.io</a> make it easy to spot and decode.</p>
+<ol><li><strong>Don&#39;t waste hours on rabbit holes.</strong> The visible cipher decoded cleanly to a <em>hint</em> — a</li></ol>
+<p>strong signal to look elsewhere (the room page) rather than continue down the encoding</p>
+<ol><li><strong>Layered encodings</strong> (ROT13 + ROT47 + Hex + Base64) are common in beginner rooms — always</li></ol>
+<p>reach for a tool like CyberChef&#39;s &quot;Magic&quot; or the named recipes.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/the-impossible-challenge-writeup.md" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

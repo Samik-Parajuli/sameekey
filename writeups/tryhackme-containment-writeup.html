@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContAInment // writeup</title>
+    <meta name="description" content="Enumerating a containerised target, abusing the misconfiguration in the environment and breaking out of containment.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>ContAInment</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Containers / Linux</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-09-01</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Containers / Linux / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> tryhackme-containment-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Enumerating a containerised target, abusing the misconfiguration in the environment and breaking out of containment.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/tryhackme-containment-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="tryhackme-containment-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h3>Scenario: You are a Security Analyst at West Tech, a classified defence &amp; R&amp;D contractor. A ransomware incident has been detected on senior researcher Oliver Deer&#39;s workstation. Your mission: investigate the breach, trace the attacker&#39;s actions, recover stolen data, and contain the threat.</h3>
+<h1>1. Initial Access &amp; Reconnaissance</h1>
+<h2>1.1 SSH into the Workstation</h2>
+<h3>SSH credentials were provided to access the affected employee&#39;s workstation:</h3>
+<pre class="code-block" data-lang="bash"><code>ssh o.deer@10.49.130.159
+Password: TryHackMe!</code></pre>
+<h2>1.2 Examine the Desktop</h2>
+<h3>A ransom/pwned note was found on the desktop:</h3>
+<pre class="code-block" data-lang="bash"><code>ls -la ~/Desktop/
+# File: pwned.txt
+cat ~/Desktop/pwned.txt
+&gt; Name: Oliver Deer
+&gt; DOB: 1990-04-11
+&gt; Email: o.deer@west-tech.io
+&gt; Address: 41 Falkner Lane, Denver, CO
+&gt; Phone: (720) 555-0173
+&gt; Employee ID: WT-DEV-88112
+&gt; Salary:</code></pre>
+<h3>The attacker exfiltrated personal employee data. This is evidence of a data breach.</h3>
+<h2>1.3 Key Files &amp; Artifacts Discovered</h2>
+<p>Location File Purpose Exfiltrated personal ~/Desktop/ pwned.txt employee data Malicious dropper ~/Downloads/ invoice_payload.scr disguised as an invoice Encrypted archive of stolen ~/ westtech_projects_encrypted.zip project data Phishing email delivering ~/Mail/ 2025-06-17_invoice_required_review.eml the payload ~/Documents/ Captured exfiltration traffic session_4444_dump.pcap pcap_dumps/ (port 4444) ~/alarms/soc_alarms/ SOC alert: unauthorized nc exfiltration_detected_1.log 2025-06-17/ connection</p>
+<h1>2. Phishing Analysis &amp; Initial Compromise</h1>
+<h2>2.1 The Phishing Email</h2>
+<h3>The attack vector was a phishing email delivered on June 17, 2025:</h3>
+<pre class="code-block" data-lang="bash"><code>Subject: INVOICE - URGENT REVIEW REQUIRED
+From: billing@westteck-payments.com   &lt;-- note the typo &quot;westteck&quot;
+To: o.deer@westtech.internal
+Date: 2025-06-17
+Dear O.Deer,
+Please review the attached invoice for last quarter&#39;s procurement activity.
+Failure to respond within 24 hours will result in service suspension.
+Attachment: invoice_payload.scr</code></pre>
+<h3>Key indicators of phishing: Spoofed sender domain: westteck-payments.com (missing &#39;h&#39; in &quot;westtech&quot;) • Urgency/social engineering: &quot;24 hours or service suspension&quot; • Malicious attachment: .scr file (Windows screensaver extension, often used for • malware delivery)</h3>
+<h2>2.2 The Malicious Payload</h2>
+<h3>The invoice_payload.scr is an ASCII bash script (not a real screensaver):</h3>
+<pre class="code-block" data-lang="bash"><code>cat ~/Downloads/invoice_payload.scr
+cat &lt;&lt; &#39;EOF&#39; | sudo tee /home/o.deer/Downloads/invoice_payload.scr &gt; /dev/null</code></pre>
+<h3>This script would overwrite itself after execution - a classic anti-forensics technique to cover tracks. When Oliver Deer opened the attachment, it executed and established persistence.</h3>
+<h1>3. Attack Timeline from SOC Alarms</h1>
+<h2>3.1 Pre-Attack Activity (June 15-16)</h2>
+<p>Date Alarm Type Description 2025-06-15 PortScan (x4) Reconnaissance - network scanning 2025-06-15 MalwarePing (x2) Malware C2 beaconing detected 2025-06-15 FailedAuth (x3) Brute force / credential stuffing attempts 2025-06-15 USBInsertion USB device connected (potential vector or staging) 2025-06-16 FailedAuth (x2) Continued credential attacks 2025-06-16 PortScan (x2) Internal network recon continues 2025-06-16 USBInsertion (x5) Multiple USB insertions - data staging 2025-06-16 MalwarePing Continued C2 communication</p>
+<h2>3.2 Attack Day (June 17)</h2>
+<p>Date Alarm Type Description 2025-06-17 FailedAuth (x2) Final credential attempts 2025-06-17 PortScan (x3) Lateral movement reconnaissance</p>
+<p>USBInsertion 2025-06-17 Data staging via USB (x4) CRITICAL: exfiltration_detected_1.log Data Unauthorized outbound connection on port 4444 via /bin/nc 2025-06-17 Exfiltration (netcat) to IP 144.76.12.34. 181,923 bytes exfiltrated.</p>
+<h2>3.3 Post-Attack (June 18)</h2>
+<h3>Continued MalwarePing and FailedAuth alarms indicate the attacker maintained persistence. The encrypted zip file was created, containing all stolen project data.</h3>
+<h1>4. Network Forensics</h1>
+<h2>4.1 Suspicious PCAP - Session 4444</h2>
+<h3>The file session_4444_dump.pcap (2,262 bytes vs. normal 198 bytes) captured the exfiltration traffic on June 17:</h3>
+<pre class="code-block" data-lang="bash"><code>strings ~/Documents/pcap_dumps/2025-06-17/session_4444_dump.pcap
+EDAC::GARBAGE::FORMAT&lt;&lt;&lt;OBF&gt;&gt;&gt; v3.4
+t: o.de[@@v</code></pre>
+<h3>The hex dump reveals a TCP connection from the workstation to the external C2 server, matching the exfiltration alert on port 4444.</h3>
+<h1>5. Decrypting the Stolen Data</h1>
+<h2>5.1 Extracting the Encrypted Archive</h2>
+<h3>The file westtech_projects_encrypted.zip in the home directory contained all stolen project data. Based on evidence gathered during the investigation, the password was identified as:</h3>
+<pre class="code-block" data-lang="bash"><code>unzip -P &quot;westtechvictim1&quot; ~/westtech_projects_encrypted.zip -d /tmp/westtech</code></pre>
+<h2>5.2 Recovered Project Files</h2>
+<p>File Content</p>
+<p>Vault-Tek &amp; West Tech strategic collaboration meeting vault_tek_collab_agenda.doc agenda Internal breach report - unauthorized biometric vault internal_security_incident_233.json access email_export_april2025.eml Internal email about Vault-Tek integration contract risks project_chimera_specs.txt Bio-weapon hybrid platform specs (Project Chimera) prototype_plasma_launcher_test_logs.log Plasma weapon prototype test logs fusion_cell_mk3_blueprints.pdf Fusion cell blueprints thm_flags.txt</p>
+<h2>500 base64-encoded candidate flags</h2>
+<p>thm_flags_guide.txt Instructions for finding the true flag</p>
+<h1>6. Finding the True Flag</h1>
+<h2>6.1 The Challenge</h2>
+<h3>The thm_flags.txt contains 500 base64-encoded strings. Each decodes to a flag in the format thm{n1,n2,n3,n4,n5} where each number is between 10-99. The rule from the guide: The true flag is the only one with exactly 3 prime numbers in its contents.</h3>
+<h2>6.2 Python Script to Find the Flag</h2>
+<pre class="code-block" data-lang="bash"><code>import base64
+def is_prime(n):
+    if n &lt; 2: return False
+    if n == 2: return True
+    if n % 2 == 0: return False
+    for i in range(3, int(n**0.5) + 1, 2):
+        if n % i == 0: return False
+    return True
+with open(&quot;thm_flags.txt&quot;) as f:
+    lines = f.read().strip().split(&quot;\n&quot;)
+for line in lines:
+    decoded = base64.b64decode(line.strip()).decode()
+    nums = [int(x) for x in decoded.replace(&quot;thm{&quot;,&quot;&quot;).replace(&quot;}&quot;,&quot;&quot;).split(&quot;,&quot;)]</code></pre>
+<pre class="code-block" data-lang="bash"><code>    prime_count = sum(1 for n in nums if is_prime(n))
+    if prime_count == 3:
+        print(f&quot;TRUE FLAG: {decoded}&quot;)
+        print(f&quot;Primes: {[n for n in nums if is_prime(n)]}&quot;)
+        break</code></pre>
+<h2>6.3 Result</h2>
+<pre class="code-block" data-lang="bash"><code>TRUE FLAG: thm{23,82,20,17,53}
+Primes: [23, 17, 53]</code></pre>
+<h3>Verification: 23 — Prime • 82 = 2 × 41 — Not prime • 20 = 2 × 2 × 5 — Not prime • 17 — Prime • 53 — Prime • Exactly 3 primes: 23, 17, 53 •</h3>
+<h2>FLAG: thm{23,82,20,17,53}</h2>
+<h1>7. Incident Summary</h1>
+<p>Phase Details Initial Phishing email from billing@westteck-payments.com with malicious .scr Access attachment Execution User opened invoice_payload.scr, running a bash dropper that overwrote itself Persistence C2 beaconing via MalwarePing alerts, port scanning for lateral movement Collection USB insertions for data staging, encrypted zip creation Exfiltration Netcat (/bin/nc) on port 4444 to 144.76.12.34, 181,923 bytes sent Impact Theft of classified project data (Project Chimera, Vault-Tek intel, prototype designs)</p>
+<h1>8. Remediation Recommendations</h1>
+<h3>Email Security: Implement DMARC/DKIM/SPF to detect spoofed sender domains • Attachment Filtering: Block .scr files at the email gateway • Network Monitoring: Detect and block unauthorized outbound connections on non- • standard ports (4444) USB Policy: Restrict USB device usage via endpoint protection • User Training: Security awareness training for phishing recognition • Incident Response: Automate containment when exfiltration alerts trigger •</h3>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/tryhackme-containment-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="tryhackme-containment-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

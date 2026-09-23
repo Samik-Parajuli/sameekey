@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Missing Person (OSINT) // writeup</title>
+    <meta name="description" content="Building a profile from public sources, correlating the data points that matter and tracking the target down using nothing but open information.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Missing Person (OSINT)</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">OSINT</span>
+      <span class="badge diff-easy">Easy</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-07</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / OSINT / Easy</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> missing-person-osint-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Building a profile from public sources, correlating the data points that matter and tracking the target down using nothing but open information.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/missing-person-osint-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="missing-person-osint-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>OSINT INVESTIGATION WRITEUP</h2>
+<h1>TryHackMe — “Missing Person”</h1>
+<h2>Track the missing friend through photos &amp; social media breadcrumbs · OSINT (Easy)</h2>
+<p>My friend went on holiday in 2025 and shared some photos, but I haven’t heard from him since. Can y Task osint-1767765507985.zip  &amp;#8594;  food.jpg, MotoGP.jpg Evidence OSINT (Open Source Intelligence) Room type Easy Difficulty Answer 8 questions (event, restaurant, bar, DJ, cave, phone) Objective Sameekey Author 7 August 2026 Date This report documents every question, where the answer was found, and the exact techniques used to find it. Commands are shown without output so the investigation can be replayed. Page 1</p>
+<h1>1. Scenario &amp; Evidence</h1>
+<p>A friend went on holiday in 2025, shared two photos, and then went silent. The last message received was: “Went to this cool MotoGP after party, and became friends with one of the local DJs who played that night. We’re going to visit a cave tomorrow.” The zip archive contains two JPEG files. The first step in any image-based OSINT investigation is extracting metadata with exiftool.</p>
+<pre class="code-block" data-lang="bash"><code>unzip osint-1767765507985.zip
+exiftool food.jpg
+exiftool MotoGP.jpg
+strings food.jpg | grep 2025</code></pre>
+<p>Key metadata: food.jpg taken 2025:10:05 19:55:30 — MotoGP.jpg taken 2025:10:05 12:33:12. Both photos are from 5 October 2025. Page 2</p>
+<h1>2. Answers, Where &amp; How They Were Found</h1>
+<h2>Q1. What is the commercial name of this circuit?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:Pertamina Mandalika International Street Circuit</code></pre>
+<p>Where/How: The MotoGP.jpg photo shows the Grand Prix circuit. The EXIF date (5 Oct 2025) points to the 2025 MotoGP calendar; a reverse image search (Google Lens) on the photo geolocates it to the Pertamina Mandalika International Circuit in Lombok, Indonesia. The official event was the “Pertamina Grand Prix of Indonesia 2025”. The commercial name of the track is Pertamina Mandalika International Street Circuit. Answer format check: 9-9-13-6-7 letters = Pertamina / Mandalika / International / Street / Circuit. </p>
+<h2>Q2. When did the event take place?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:03-05/10/2025</code></pre>
+<p>Where/How: EXIF confirms the friend was there on 05/10/2025 (race day). The 2025 MotoGP calendar shows the Pertamina Grand Prix of Indonesia ran 3–5 October 2025 at Mandalika (a 3-day race weekend). The event therefore took place 03-05/10/2025. Answer format check: 03-05 / 10 / 2025. </p>
+<h2>Q3. He told me he ate delicious Mexican food. What is the name of the restaurant?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:Cantina Mexicana</code></pre>
+<p>Where/How: The food.jpg photo shows a colourful Mexican restaurant. Printed on the yellow table in the foreground of the image is the text “CANTINA MEXICANA”. A reverse image search confirms it as Cantina Mexicana, a popular Mexican restaurant in Kuta, Lombok (a MotoGP-week hotspot). Answer format check: 7-8 letters = Cantina / Mexicana. </p>
+<h2>Q4. At what time was this photo taken?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:19:55:30</code></pre>
+<p>Where/How: exiftool on food.jpg returns Date/Time Original = 2025:10:05 19:55:30. (The MotoGP.jpg photo was taken at 12:33:12; the restaurant photo in question is the evening dinner shot at 19:55:30.) Answer format check: HH:MM:SS = 19:55:30. </p>
+<h2>Q5. What is the full address of the bar’s location?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:Jl. Raya Kuta, Kuta, Kec. Pujut, Kabupaten Lombok Tengah, Nusa
+Tenggara Bar.</code></pre>
+<p>Where/How: The final message points to a MotoGP after-party bar. The headline after-party was at Mandalika Beach Club, but the message says a local DJ played, and the answer format ruled out that line-up. Searching “MotoGP after party 5 October 2025 Lombok” surfaces Surfers Bar Kuta Lombok (advertised on Instagram/Facebook @surfersbar.lombok as the “biggest party after the MotoGP race, Sunday 5 October 2025”). Copying the venue from Google Maps gives the full administrative address Page 3</p>
+<p>above. Answer format check: Jl.(2) Raya(4) Kuta(4), Kuta(4), Kec.(3) Pujut(5), Kabupaten(9) Lombok(6) Tengah(6), Nusa(4) Tenggara(8) Bar.(3). </p>
+<h2>Q6. What is the DJ’s stage name?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:Bong Leleh</code></pre>
+<p>Where/How: Surfers Bar is owned by the local brothers Bong and Wona. Checking Surfers Bar’s social-media reels for the 5 Oct 2025 event reveals the local DJ who played that night: Bong Leleh. (The Mandalika Beach Club headliner “DJ Panda” was the wrong lead — not a local, and the format 2+5 did not match.) Answer format check: 4-5 letters = Bong / Leleh. </p>
+<h2>Q7. After digging into the DJ’s other online accounts, what cave does he take tourists to?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:Gua Sumur</code></pre>
+<p>Where/How: The DJ’s personal Facebook page, @bongleleh, is titled “Gua Sumur Lombok” — linking the DJ to the cave he takes tourists to. Gua Sumur (“Well Cave”) is a well-known limestone cave near Mandalika, famous for its dramatic light effects. Answer format check: 3-5 letters = Gua / Sumur. </p>
+<h2>Q8. What number did the DJ list for his tour business?</h2>
+<pre class="code-block" data-lang="bash"><code>Answer:085333137345</code></pre>
+<p>Where/How: The same Facebook profile (@bongleleh / “Gua Sumur Lombok”) lists a contact number for the cave-tour business: +62 853-3313-7345. Removing the country code (+62) leaves the 12-digit local number 085333137345. (Third-party aggregators such as Wanderlog list other numbers — e.g. 082339064733 — but those belong to different businesses.) Answer format check: 12 digits = 085333137345.  Page 4</p>
+<h1>3. Answers Summary Question Answer 1 Commercial name of the circuit</h1>
+<pre class="code-block" data-lang="bash"><code>Pertamina Mandalika International Street Circuit</code></pre>
+<p>2 When did the event take place</p>
+<pre class="code-block" data-lang="bash"><code>03-05/10/2025</code></pre>
+<p>3 Name of the Mexican restaurant</p>
+<pre class="code-block" data-lang="bash"><code>Cantina Mexicana</code></pre>
+<p>4 Time the photo was taken</p>
+<pre class="code-block" data-lang="bash"><code>19:55:30</code></pre>
+<p>5 Full address of the bar</p>
+<pre class="code-block" data-lang="bash"><code>Jl. Raya Kuta, Kuta, Kec. Pujut, Kabupaten Lombok Tengah, Nus</code></pre>
+<p>6 DJ’s stage name</p>
+<pre class="code-block" data-lang="bash"><code>Bong Leleh</code></pre>
+<p>7 Cave he takes tourists to</p>
+<pre class="code-block" data-lang="bash"><code>Gua Sumur</code></pre>
+<p>8 Phone number for the tour business</p>
+<pre class="code-block" data-lang="bash"><code>085333137345</code></pre>
+<h1>4. Key Techniques &amp; Takeaways</h1>
+<p>•exiftool first on every provided image — timestamps (and GPS, when present) anchor the timeline (Q2, Q4). •Reverse image search (Google Lens) geolocates food, venues and landmarks (Q1, Q3). •Re-read the message: the word “bar” (not beach club) was the pivot that ruled out Mandalika Beach Club and led to Surfers Bar (Q5). •Social-media enumeration: event reels (@surfersbar.lombok) identified the local DJ, and his personal Facebook page (@bongleleh, titled “Gua Sumur Lombok”) tied the DJ to the cave and the tour-business phone number (Q6–Q8). •Use the answer formats: the character-count hint (e.g. 4+5 for the DJ name) immediately rules out wrong candidates such as “DJ Panda” (2+5). •Prefer primary sources: the correct phone number came from the DJ’s own Facebook profile, not from third-party aggregator sites. © 2026 Sameekey — TryHackMe “Missing Person” (OSINT) writeup. Page 5</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/missing-person-osint-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="missing-person-osint-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

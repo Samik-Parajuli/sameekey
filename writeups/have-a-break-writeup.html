@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Have A Break // writeup</title>
+    <meta name="description" content="Quick enumeration on Have A Break, finding the weak spot in the application and exploiting it without overcomplicating things.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Have A Break</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-easy">Easy</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-11</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Easy</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> have-a-break-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Quick enumeration on Have A Break, finding the weak spot in the application and exploiting it without overcomplicating things.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/have-a-break-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="have-a-break-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <p>Case EC-2026-0847-CZ — ECTA Freight Crime Intelligence Division Cargo Theft Investigation Writeup — Nestlé / KITKAT Shipment (Italy → Poland) CZ Node — Final Investigative Report Date of report: 11 August 2026</p>
+<h2>1. Executive Summary</h2>
+<p>On 26 March 2026 a refrigerated HGV operated by TransEuro Logistics s.r.o. (Brno, CZ) departed a Nestlé production facility in Central Italy carrying 413,793 units of KITKAT confectionery (approx. 12 t) bound for Poland. The vehicle failed to complete scheduled check-ins en route and has not been located. Forensic analysis of the subpoenaed corporate records (Exhibit A, Exhibit B, and the TransEuro IT package) establishes that the theft was insider-facilitated: route-planning personnel leaked the operational file, and a late-working colleague anonymously reported the anomaly through a VPN-hosted journalist tip.</p>
+<h2>2. Answers (Overview)</h2>
+<h1>Question Answer 1 VPN service used to send the anonymous email Mullvad 2 Petrol station where the vehicle was last seen Kromęřížská 1281, 768 24 Hulín, Czechia 3 Suspicious action — route planning system, 25 Mar 2026 22:14:09 4 Employee ID of the anonymous email sender BR-0312 5 Employee ID responsible for leaking shipment detailsBR-0291 6 Leaker&#39;s full name Radovan Blšťák</h1>
+<h2>3. Question 1 — VPN service used for the anonymous email</h2>
+<p>The message processor headers of exhibit_a.eml were read from bottom to top. The lowest ‘Received’ header exposes the real sending infrastructure:</p>
+<pre class="code-block" data-lang="bash"><code>Received: from [193.32.249.132] ([193.32.249.132])
+    by smtp.gmail.com with ESMTPSA ... (TLS1_3)
+    Thu, 27 Mar 2026 23:14:55 +0100 (CET)</code></pre>
+<p>WHOIS / IP-intelligence lookup for 193.32.249.132 returns ASN AS39351, netname NET-31173-193-32-249-0-24, owned by 31173 Services AB (Amsterdam, NL). 31173 Services AB is the hosting operator for Mullvad VPN exit nodes, which confirms the whistleblower anonymised the tip through the Mullvad service. Additional send metadata: the client used ‘K-9 Mail for Android’ (mobile), from GMail account notmyname2847@gmail.com.</p>
+<h2>4. Question 2 — Petrol station where the vehicle was last seen</h2>
+<p>Exhibit B (dashcam frame, timestamp 26.03.2026 22:31:07) shows a motorway service area on the D1 corridor. OCR of the image reveals:</p>
+<pre class="code-block" data-lang="bash"><code>• ORLEN branding on the building and price board
+• Fuel board: Natural 95 — 36.90; Diesel; LPG 17.90</code></pre>
+<pre class="code-block" data-lang="bash"><code>• Direction gantry: ‘Olomouc 27 km’ / ‘Brno 45 km’ (D1)</code></pre>
+<p>The briefing memo places the dashcam recovery near Hulín on the D1 corridor. Cross-referencing the D1 ORLEN station at that position identifies the site as Kromęřížská 1281, 768 24 Hulín, Czechia, an ORLEN (Benzina) station with 24h fuel and truck parking used as an overnight stop on the IT–PL corridor (consistent with the ORLEN service area referenced in the internal comms). The truck seen in the parking area at 22:31 on 26 March is consistent with the expected transit window after a morning departure from Central Italy.</p>
+<h2>5. Question 3 — Time of the suspicious action (25 March 2026)</h2>
+<p>Review of the subpoenaed access log (access_log.csv) for the night before departure (25 March 2026) reveals exactly one anomalous event — the only EXPORT action in the entire log, performed on the IT–PL route file at an odd hour:</p>
+<pre class="code-block" data-lang="bash"><code>2026-03-25, 22:14:09, BR-0291, ROUTE_IT_PL_Q1_2026.pdf, EXPORT</code></pre>
+<p>Exporting an operational route file at 22:14 the night before departure constitutes the ‘access to a file that had no reason to be touched at that hour’ described in Exhibit A. Answer: 22:14:09. Supporting anomaly: BR-0291 also received an AUTH_FAILED on the same file on 24 March at 07:11:03.</p>
+<h2>6. Question 4 — Employee ID of the anonymous email sender</h2>
+<p>The anonymous sender states they personally witnessed the irregular activity the night before departure. The access log shows BR-0312 (Dispatch Operator, Brno office) was genuinely working late on 25 March — editing DRIVER_SCHEDULE_WK13.xlsx at 23:41:17 — the same night BR-0291 performed the unusual export. BR-0312 therefore had direct visibility of the anomalous audit trail and, distrusting internal channels (a colleague had been compromised), reported it externally via Mullvad VPN using a mobile client (K-9 Mail for Android). Answer: BR-0312.</p>
+<h2>7. Question 5 &amp; 6 — The leaker: employee ID and full name</h2>
+<p>Multiple corroborating indicators identify the leaker:</p>
+<pre class="code-block" data-lang="bash"><code>• EXPORT of ROUTE_IT_PL_Q1_2026.pdf on 2026-03-25 22:14:09 (access_log.csv)
+• AUTH_FAILED on the same file on 2026-03-24 07:11:03 (access_log.csv)
+• IT alert (BR-0255, 24 Mar): an external address kraliknovak09@gmail.com requested access
+to the route-planning shared folder — blocked (comms_export.txt)</code></pre>
+<p>The personal GMail address kraliknovak09@gmail.com ties the account to the leaker. An account lookup (google-account OSINT) resolves the public profile attached to kraliknovak09@gmail.com to the name Radovan Blšťák, whose employee record (hometown Králice nad Oslavou) is consistent with the ‘Kralik’ element of the burner address — a classic personal-information opsec failure. Answer: employee ID BR-0291, name Radovan Blšťák.</p>
+<h2>Appendix A — Evidence index</h2>
+<p>Source Detail Relevance ecta_memo.html.pdfCase EC-2026-0847-CZ; dashcam recovered near Hulín; transit corridor Route &amp;geography of investigation exhibit_a.eml Send IP 193.32.249.132; K-9 Mail / Android; received 27 Mar 23:14 CET Sent via Mullvad VPN</p>
+<p>exhibit_b.png ORLEN signage; Olomouc 27 km / Brno 45 km; 26.03.2026 22:31:07 Last sighting &amp;mdash; ORLEN Hulín employees.csv BR-0291 = Route Planner, Králice nad Oslavou; BR-0312 = Dispatch Operator Personnel cross-reference access_log.csv 2026-03-25 22:14:09 BR-0291 EXPORT; 23:41:17 BR-0312 EDIT; 24 Mar AUTH_FAILED Anomalous access + witness comms_export.txt IT alert re: kraliknovak09@gmail.com blocked access request Personal-account tie to leaker</p>
+<h2>Appendix B — Conclusion</h2>
+<p>The investigation concludes that the Nestlé / KITKAT heist was made possible by BR-0291 (Radovan Blšťák), a Route Planner who pulled and exported the Italy–Poland route file on the night of 25 March 2026 using his personal GMail account for unauthorised access, leaking the consignment details. BR-0312, working late, witnessed the export and reported the anomaly anonymously through the Mullvad VPN to Brno Regional News, giving law enforcement the investigative thread that exposed the insider.</p>
+<ul><li>End of report —</li></ul>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/have-a-break-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="have-a-break-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

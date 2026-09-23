@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Clean Exit // writeup</title>
+    <meta name="description" content="DFIR insider threat investigation for GlobalTech Manufacturing. Uncovering Turner&#39;s exfiltration tradecraft across USB insertion, BITS transfer jobs, RDP lateral movement, SMB staging, and security event log tampering using KAPE triage.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>The Clean Exit</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">DFIR / Windows Forensics</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-09-22</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / DFIR / Windows / KAPE / Forensics / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> the-clean-exit-writeup.md</span>
+                </div>
+                <p class="writeup-summary">DFIR insider threat investigation for GlobalTech Manufacturing. Uncovering Turner&#39;s exfiltration tradecraft across USB insertion, BITS transfer jobs, RDP lateral movement, SMB staging, and security event log tampering using KAPE triage.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/the-clean-exit-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="the-clean-exit-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>TryHackMe DFIR — THM Security Services for GlobalTech Manufacturing — 100% Complete Walkthrough</h2>
+<blockquote><p><strong>TL;DR</strong> — An insider threat investigation tracking departing employee Alan Turner at GlobalTech Manufacturing. Turner attempted exfiltration via USB mass storage and background intelligent transfer (BITS), pivoted via RDP to an internal staging share, wiped his workstation event logs and MFT traces, but was caught dead to rights through low-level NTFS USN Journal (<code>$Extend\$J</code>) parsing and ShellBags recovery.</p></blockquote>
+<h2>1. Case Briefing</h2>
+<p>The finance division at GlobalTech Manufacturing discovered that critical vendor contracts for Q3 were missing. Suspicion immediately fell on Alan Turner, a departing executive.</p>
+<p>Our DFIR objective was to reconstruct Turner&#39;s actions on workstation <code>WKS-07</code> down to the exact second, identify all staging directories and exfiltration destinations, and determine how he attempted to cover his tracks.</p>
+<h2>2. All 10 Investigation Answers at a Glance</h2>
+<h2>3. Step-by-Step Forensic Reconstruction</h2>
+<h3>1. USB Storage Artifacts (Q1, Q2, Q3)</h3>
+<p>Parsing the <code>SYSTEM</code> hive inside Registry Explorer revealed the vendor ID and serial number of the plugged storage device:</p>
+<ul><li><strong>Path</strong>: <code>ControlSet001\Enum\USB\VID_152D&amp;PID_0578\MSFT300123456789ABCDEF</code></li><li><strong>DeviceDesc</strong>: <code>USB Attached SCSI Mass Storage Device</code></li></ul>
+<p>Mounting the <code>SOFTWARE</code> hive identified the assigned drive letter (<code>E:</code>) and the volume label:</p>
+<ul><li><strong>Volume Label</strong>: <code>PERSONAL_BACKUP</code> (plugged at <code>2026-07-12 18:04:58</code>)</li></ul>
+<p>To discover what executable was launched from drive <code>E:</code>, we examined the ROT13-encoded <code>UserAssist</code> keys within <code>NTUSER.DAT</code>:</p>
+<pre class="code-block" data-lang="text"><code>E:\Tools\exfiltool.exe — Executed at 18:06:12</code></pre>
+<h3>2. The BITS Transfer Attempt (Q4, Q5)</h3>
+<p>When <code>exfiltool.exe</code> failed, Turner pivoted to a native Windows LOLBin: <strong>Background Intelligent Transfer Service (BITS)</strong>.</p>
+<p>Extracting event logs from <code>Microsoft-Windows-Bits-Client%4Operational.evtx</code>:</p>
+<pre class="code-block" data-lang="powershell"><code>Get-WinEvent -Path &#39;...\winevt\Logs\Microsoft-Windows-Bits-Client%4Operational.evtx&#39; `
+  | Select-Object TimeCreated, Message | Select-String -Pattern &quot;evil&quot;</code></pre>
+<p>The query surfaced a canceled job attempting to push <code>FinanceDocs.zip</code> to:</p>
+<pre class="code-block" data-lang="text"><code>https://evil-external.thm/upload/FinanceDocs.zip</code></pre>
+<h3>3. Lateral Movement &amp; ShellBags (Q6, Q7, Q8, Q9)</h3>
+<p>With direct external HTTP traffic blocked by the perimeter firewall, Turner initiated an RDP connection to an internal jump box:</p>
+<ul><li><code>MRU0</code> in <code>NTUSER.DAT\Software\Microsoft\Terminal Server Client\Default</code>: <code>GTM-JUMP-01</code></li></ul>
+<p>Examining <code>UsrClass.dat</code> using ShellBagsExplorer revealed that Turner browsed to <code>C:\Users\aturner\Desktop\FinanceDocs\VendorContracts_Q3</code> at <code>18:17:30</code>. He staged the files to an internal hidden SMB share:</p>
+<pre class="code-block" data-lang="text"><code>\\192.168.86.172\Staging$</code></pre>
+<h3>4. Anti-Forensics &amp; The USN Journal (Q10)</h3>
+<p>Turner attempted to sanitize <code>WKS-07</code> by executing a cleanup script:</p>
+<ul><li>Emptied the Recycle Bin via <code>Shift+Delete</code>.</li><li>Cleared AppCompat and <code>RecentFileCache.bcf</code>.</li><li>Deleted the Windows Firewall with Advanced Security event log.</li></ul>
+<p>A standard scan of <code>$MFT</code> yielded no results due to rapid MFT slot reuse across 250,000+ subsequent disk operations. However, the NTFS <strong>USN Journal (<code>$Extend\$J</code>)</strong> is strictly append-only and retains transaction records even after MFT entries are overwritten.</p>
+<p>Running <code>MFTECmd</code> against the USN Journal:</p>
+<pre class="code-block" data-lang="bash"><code>MFTECmd.exe -f &#39;...\WKS-07\C\$Extend\$J&#39; -m &#39;...\WKS-07\C\$MFT&#39; --csv %USERPROFILE%\Desktop --csvf usnjrnl.csv</code></pre>
+<p>Filtering for <code>Firewall.evtx</code> pinpointed a <code>DataTruncation</code> (clear) operation:</p>
+<pre class="code-block" data-lang="text"><code>UpdateTimestamp: 2026-07-12 18:21:40.7658957
+File Name: Microsoft-Windows-Windows Firewall With Advanced Security%4Firewall.evtx
+Reason: DataOverwrite | DataTruncation</code></pre>
+<p>In 12-hour format: <strong><code>06:21:40 PM</code></strong>.</p>
+<h2>4. Key Takeaways</h2>
+<ol><li><strong>Never Rely Solely on the <code>$MFT</code></strong>: When anti-forensics tools overwrite deleted MFT records, the NTFS <code>$Extend\$J</code> journal frequently preserves record creation, modification, and truncation reasons.</li><li><strong>UserAssist Reliability</strong>: The Windows <code>UserAssist</code> registry subkey remains one of the fastest and most dependable methods to prove program execution directly from removable drives.</li><li><strong>Internal Pivots in Exfiltration</strong>: Attackers often stage confidential data on internal jump boxes and hidden administrative shares (<code>$</code>) when egress points are monitored.</li></ol>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/the-clean-exit-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="the-clean-exit-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

