@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="red">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <!-- Primary SEO Metadata -->
+    <title>Security Projects &amp; Workstations | Sameek Parajuli (sameekey)</title>
+    <meta name="title" content="Security Projects &amp; Workstations | Sameek Parajuli (sameekey)">
+    <meta name="description" content="Production-grade client-side offensive and forensic workstations built by Sameek Parajuli: JWT Analyzer, HTTP Header Security Audit, CIDR Calculator, CVE Radar, URL Parser, Regex Extractor, Timestamp Converter, and JSON Sanitizer.">
+    <meta name="keywords" content="cybersecurity tools, JWT analyzer, HTTP security headers, CIDR calculator, CVE lookup, regex extractor, timestamp converter, offensive security, penetration testing, Sameek Parajuli, sameekey">
+    <meta name="author" content="Sameek Parajuli">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sameekey.me/projects.html">
+    <meta property="og:title" content="Security Projects &amp; Workstations | Sameek Parajuli">
+    <meta property="og:description" content="Interactive, client-side offensive security engineering workstations: JWT, Headers, CIDR, CVE, URL/SSRF, Regex, Timestamps, and JSON.">
+    <meta property="og:image" content="Images/thm_hacker_holidays_cert.png">
+
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💀</text></svg>">
+
+    <!-- Stylesheets & Fonts -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+</head>
+<body class="cyberpunk-theme">
+    <!-- Visual CRT Overlays & Canvas Backgrounds -->
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="crt-overlay" aria-hidden="true"></div>
+    <div class="vignette-overlay" aria-hidden="true"></div>
+    <canvas id="matrixCanvas" class="matrix-canvas" aria-hidden="true"></canvas>
+    <div class="cyber-grid-overlay" aria-hidden="true"></div>
+
+    <!-- Quick Audio Element for SFX Synthesizer -->
+    <audio id="audioSynth" preload="none" aria-hidden="true"></audio>
+
+    <!-- Top Tactical Status Bar -->
+    <header class="tactical-status-bar" role="banner">
+        <div class="status-left">
+            <span class="status-pulse-dot"></span>
+            <span class="sys-label">SYSTEM:</span>
+            <span class="sys-val" id="sysKernelVersion">KALI LINUX 6.8.0-SECURITY-PORTAL</span>
+            <span class="sys-divider">|</span>
+            <span class="sys-label">CLEARANCE:</span>
+            <span class="sys-val clearance-text">LEVEL-5 OMEGA</span>
+        </div>
+        <div class="status-center">
+            <span class="sys-banner-alert"><i class="fas fa-microchip"></i> WORKSTATION PORTAL // 8 LIVE CLIENT-SIDE TOOLS READY</span>
+        </div>
+        <div class="status-right">
+            <span class="sys-label">LATENCY:</span>
+            <span class="sys-val" id="pingDisplay">14ms</span>
+            <span class="sys-divider">|</span>
+            <span class="sys-label">UTC:</span>
+            <span class="sys-val" id="liveUtcClock">00:00:00 UTC</span>
+        </div>
+    </header>
+
+    <div class="layout-container">
+        <!-- Tactical Left Navigation -->
+        <nav class="left-nav" id="leftNav">
+            <div class="logo">
+                <a href="index.html" class="logo-link">
+                    <span class="logo-prompt">#</span><span class="logo-name" data-text="sameekey">sameekey</span>
+                    <span class="cursor-blink"></span>
+                </a>
+            </div>
+
+            <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+                <span class="nav-toggle-text">NAV</span>
+            </button>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html#about"><i class="fas fa-user-secret"></i> <span>[01] Whoami</span></a></li>
+                <li><a href="index.html#achievements"><i class="fas fa-award"></i> <span>[02] Proof</span></a></li>
+                <li><a href="index.html#skills"><i class="fas fa-microchip"></i> <span>[03] Arsenal</span></a></li>
+                <li><a href="index.html#assessments"><i class="fas fa-crosshairs"></i> <span>[04] Ops &amp; Reports</span></a></li>
+                <li><a href="writeups.html"><i class="fas fa-scroll"></i> <span>[05] Writeups</span> <span class="nav-badge" id="navWriteupCount">31</span></a></li>
+                <li><a href="projects.html" class="active"><i class="fas fa-microchip"></i> <span>[06] Projects</span> <span class="nav-badge">8</span></a></li>
+                <li><a href="index.html#resume"><i class="fas fa-file-shield"></i> <span>[07] Dossier</span></a></li>
+            </ul>
+
+            <!-- Quick HUD Controllers -->
+            <div class="nav-hud-controls">
+                <button class="hud-btn" id="cliLaunchBtn" type="button" title="Open Interactive CLI Terminal (Hotkey: `)">
+                    <i class="fas fa-terminal"></i> <span>CLI [~]</span>
+                </button>
+                <button class="hud-btn" id="sfxToggleBtn" type="button" title="Toggle Cyber Audio Synthesizer (Hotkey: S)">
+                    <i class="fas fa-volume-xmark"></i> <span>SFX: OFF</span>
+                </button>
+                <div class="theme-picker-wrap">
+                    <button class="hud-btn theme-btn" id="themePickerBtn" type="button" title="Change Cyberpunk Palette (Hotkey: T)">
+                        <i class="fas fa-palette"></i> <span>Theme</span>
+                    </button>
+                    <div class="theme-dropdown" id="themeDropdown">
+                        <button class="theme-opt" data-set-theme="red"><span class="swatch red"></span> Blood Red</button>
+                        <button class="theme-opt" data-set-theme="green"><span class="swatch green"></span> Matrix Green</button>
+                        <button class="theme-opt" data-set-theme="cyan"><span class="swatch cyan"></span> Cyber Cyan</button>
+                        <button class="theme-opt" data-set-theme="gold"><span class="swatch gold"></span> Hacker Amber</button>
+                        <button class="theme-opt" data-set-theme="light"><span class="swatch light"></span> Stealth Light</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Links -->
+            <div class="social-links">
+                <a href="https://github.com/Samik-Parajuli" target="_blank" rel="noopener" title="GitHub /Samik-Parajuli" aria-label="GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://www.linkedin.com/in/sameek-parajuli-753b9a30a/" target="_blank" rel="noopener" title="LinkedIn /sameek-parajuli" aria-label="LinkedIn">
+                    <i class="fab fa-linkedin-in"></i>
+                </a>
+                <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" title="TryHackMe /sameekey" aria-label="TryHackMe">
+                    <i class="fas fa-shield-cat"></i>
+                </a>
+                <a href="https://www.instagram.com/sameekey/" target="_blank" rel="noopener" title="Instagram /sameekey" aria-label="Instagram">
+                    <i class="fab fa-instagram"></i>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Surface -->
+        <main class="main-content">
+            <!-- Breadcrumb Navigation Bar -->
+            <div class="terminal-bar" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                    <span class="term-title">sameekey@kali: ~/projects$ ./launch_workstations.sh --all</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <a href="https://github.com/Samik-Parajuli/Projects" target="_blank" rel="noopener noreferrer" class="cyber-btn accent small">
+                        <i class="fab fa-github"></i> GitHub Monorepo ↗
+                    </a>
+                    <a href="index.html" class="cyber-btn ghost small">
+                        <i class="fas fa-arrow-left"></i> Return to Main Terminal
+                    </a>
+                    <a href="index.html#assessments" class="cyber-btn ghost small">
+                        <i class="fas fa-crosshairs"></i> Flagship Pentest Reports
+                    </a>
+                    <a href="writeups.html" class="cyber-btn primary small">
+                        <i class="fas fa-scroll"></i> CTF Writeups Archive
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section Header -->
+            <section id="projects" class="section" style="padding-top: 0;">
+                <div class="section-header">
+                    <div class="section-tag">// APPLIED CYBERSECURITY ENGINEERING &amp; UTILITY SUITE</div>
+                    <h1 class="term-heading" style="font-size: 2.2rem;">Security Projects &amp; Operator Workstations</h1>
+                    <p class="section-sub">
+                        8 purpose-built, client-side offensive and analysis applications. Designed for real-time penetration testing,
+                        payload analysis, triage, and network calculations with <strong>zero telemetry or backend data egress</strong>.
+                    </p>
+                </div>
+
+                <!-- Stats HUD Row -->
+                <div class="stat-hud-grid" style="margin-bottom: 2rem;">
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-microchip"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val">8</span>
+                            <span class="hud-stat-label">Tactical Workstations</span>
+                        </div>
+                    </div>
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-shield-halved"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val">100%</span>
+                            <span class="hud-stat-label">Air-Gapped &amp; Client-Side</span>
+                        </div>
+                    </div>
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val">0ms</span>
+                            <span class="hud-stat-label">Instant Browser Eval</span>
+                        </div>
+                    </div>
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-skull"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val">Exploit</span>
+                            <span class="hud-stat-label">Attack Mutation Presets</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Workstation Interface -->
+                <div class="projects-workstation" data-aos="fade-up">
+                    <div class="workstation-nav-bar" id="projectTabs">
+                        <button class="workstation-tab active" data-project="jwt" type="button"><i class="fas fa-id-badge"></i> JWT Analyzer</button>
+                        <button class="workstation-tab" data-project="headers" type="button"><i class="fas fa-shield-virus"></i> Security Headers</button>
+                        <button class="workstation-tab" data-project="cidr" type="button"><i class="fas fa-network-wired"></i> CIDR/IP Calculator</button>
+                        <button class="workstation-tab" data-project="cve" type="button"><i class="fas fa-bug"></i> CVE Lookup</button>
+                        <button class="workstation-tab" data-project="url" type="button"><i class="fas fa-link"></i> URL/Subdomain Parser</button>
+                        <button class="workstation-tab" data-project="regex" type="button"><i class="fas fa-filter"></i> Regex Extractor</button>
+                        <button class="workstation-tab" data-project="time" type="button"><i class="fas fa-clock"></i> Timestamp Converter</button>
+                        <button class="workstation-tab" data-project="json" type="button"><i class="fas fa-code"></i> JSON Formatter</button>
+                    </div>
+
+                    <!-- 1. JWT Analyzer -->
+                    <div class="project-pane active" id="paneProjJwt">
+                        <div class="tool-controls-bar">
+                            <span class="tool-label">PRESETS:</span>
+                            <div class="tool-options">
+                                <button class="tool-opt-btn" id="jwtSampleValid" type="button">Valid Sample</button>
+                                <button class="tool-opt-btn" id="jwtSampleExpired" type="button">Expired Token</button>
+                                <button class="tool-opt-btn" id="jwtSampleNone" type="button">Alg 'None' Attack</button>
+                            </div>
+                            <a href="https://github.com/Samik-Parajuli/Projects/tree/main/01-jwt-security-analyzer" target="_blank" rel="noopener noreferrer" class="tool-opt-btn" style="margin-left:auto; color:var(--primary); border-color:var(--primary);">
+                                <i class="fab fa-github"></i> View CLI &amp; Code on GitHub &nearr;
+                            </a>
+                        </div>
+                        <div class="tool-io-grid">
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label for="jwtInput"><i class="fas fa-key"></i> ENCODED JWT TOKEN</label>
+                                    <button class="tool-inline-btn" id="clearJwtBtn" type="button">Clear</button>
+                                </div>
+                                <textarea id="jwtInput" placeholder="Paste JSON Web Token (header.payload.signature)..."></textarea>
+                                <div class="jwt-color-preview" id="jwtColorPreview"></div>
+                            </div>
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label><i class="fas fa-unlock-keyhole"></i> DECODED CLAIMS &amp; AUDIT</label>
+                                    <button class="tool-inline-btn" id="copyJwtJsonBtn" type="button"><i class="fas fa-copy"></i> Copy Claims</button>
+                                </div>
+                                <div id="jwtAuditStatus" class="jwt-audit-banner"></div>
+                                <div class="jwt-decoded-view">
+                                    <h4 class="jwt-sec-header">HEADER: Algorithm &amp; Token Type</h4>
+                                    <pre class="jwt-block" id="jwtHeaderOut">// Header json will appear here</pre>
+                                    <h4 class="jwt-sec-header">PAYLOAD: Data Claims &amp; Expiry</h4>
+                                    <pre class="jwt-block" id="jwtPayloadOut">// Payload json will appear here</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. HTTP Security Header Analyzer -->
+                    <div class="project-pane" id="paneProjHeaders" hidden>
+                        <div class="tool-controls-bar">
+                            <span class="tool-label">PRESETS:</span>
+                            <div class="tool-options">
+                                <button class="tool-opt-btn" id="hdrPresetHardened" type="button">Hardened Server</button>
+                                <button class="tool-opt-btn" id="hdrPresetVulnerable" type="button">Vulnerable Defaults</button>
+                            </div>
+                            <a href="https://github.com/Samik-Parajuli/Projects/tree/main/02-http-security-header-scanner" target="_blank" rel="noopener noreferrer" class="tool-opt-btn" style="margin-left:auto; color:var(--primary); border-color:var(--primary);">
+                                <i class="fab fa-github"></i> View CLI &amp; Code on GitHub &nearr;
+                            </a>
+                        </div>
+                        <div class="tool-io-grid">
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label for="headersInput"><i class="fas fa-bars-staggered"></i> RAW HTTP RESPONSE HEADERS</label>
+                                    <button class="tool-inline-btn" id="clearHeadersBtn" type="button">Clear</button>
+                                </div>
+                                <textarea id="headersInput" placeholder="Paste HTTP headers (e.g. from curl -I or Burp Suite response):
+HTTP/1.1 200 OK
+Content-Type: text/html
+Server: Apache
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+..."></textarea>
+                            </div>
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label><i class="fas fa-shield-halved"></i> POSTURE AUDIT &amp; REMEDIATION</label>
+                                    <span id="headersGradeBadge" class="headers-grade grade-c">GRADE --</span>
+                                </div>
+                                <div class="headers-audit-results" id="headersResults">
+                                    <p class="hash-hint">Paste raw HTTP response headers to evaluate CSP, HSTS, X-Frame-Options, CORS, and dangerous info leakage.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. CIDR/IP Subnet Calculator -->
+                    <div class="project-pane" id="paneProjCidr" hidden>
+                        <div class="tool-single-form">
+                            <div class="cidr-input-row">
+                                <div class="cidr-input-group">
+                                    <label for="cidrInput"><i class="fas fa-network-wired"></i> IP ADDRESS / CIDR NOTATION</label>
+                                    <input type="text" id="cidrInput" placeholder="e.g. 192.168.1.1/24 or 10.10.10.128/25" autocomplete="off" value="192.168.1.1/24">
+                                </div>
+                                <div class="cidr-quick-select">
+                                    <button class="tool-opt-btn" data-mask="8" type="button">/8 (Class A)</button>
+                                    <button class="tool-opt-btn" data-mask="16" type="button">/16 (Class B)</button>
+                                    <button class="tool-opt-btn" data-mask="24" type="button">/24 (Class C)</button>
+                                    <button class="tool-opt-btn" data-mask="30" type="button">/30 (Pt-to-Pt)</button>
+                                    <a href="https://github.com/Samik-Parajuli/Projects/tree/main/03-cidr-subnet-calculator" target="_blank" rel="noopener noreferrer" class="tool-opt-btn" style="margin-left:auto; color:var(--primary); border-color:var(--primary);">
+                                        <i class="fab fa-github"></i> CLI &amp; Code &nearr;
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="cidr-table-wrap">
+                                <table class="cidr-results-table">
+                                    <tbody id="cidrTableBody">
+                                        <!-- Dynamically generated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. CVE Lookup & Exploit Radar -->
+                    <div class="project-pane" id="paneProjCve" hidden>
+                        <div class="tool-single-form">
+                            <div class="cve-search-row">
+                                <label for="cveInput"><i class="fas fa-shield-virus"></i> CVE IDENTIFIER OR KEYWORD</label>
+                                <div class="cve-input-wrap">
+                                    <input type="text" id="cveInput" placeholder="e.g. CVE-2021-44228, CVE-2023-38606, Log4Shell, EternalBlue..." autocomplete="off">
+                                    <button class="cyber-btn primary small" id="cveSearchBtn" type="button"><i class="fas fa-search"></i> Search CVE</button>
+                                    <a href="https://github.com/Samik-Parajuli/Projects/tree/main/04-cve-intelligence-radar" target="_blank" rel="noopener noreferrer" class="cyber-btn ghost small" style="white-space:nowrap;">
+                                        <i class="fab fa-github"></i> Code &nearr;
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="cve-quick-tags">
+                                <span class="cve-tag" data-cve="CVE-2021-44228">Log4Shell (CVE-2021-44228)</span>
+                                <span class="cve-tag" data-cve="CVE-2017-0144">EternalBlue (CVE-2017-0144)</span>
+                                <span class="cve-tag" data-cve="CVE-2024-3094">XZ Backdoor (CVE-2024-3094)</span>
+                                <span class="cve-tag" data-cve="CVE-2023-38606">Triangulation (CVE-2023-38606)</span>
+                                <span class="cve-tag" data-cve="CVE-2022-22965">Spring4Shell (CVE-2022-22965)</span>
+                                <span class="cve-tag" data-cve="CVE-2023-44487">HTTP/2 Rapid Reset</span>
+                            </div>
+                            <div class="cve-result-panel" id="cveResultPanel">
+                                <p class="hash-hint">Search a CVE number above to review CVSS v3.1 metrics, vector strings, severity, impact, and known exploits.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Subdomain & URL Parser -->
+                    <div class="project-pane" id="paneProjUrl" hidden>
+                        <div class="tool-single-form">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+                                <label for="urlParserInput" style="margin-bottom:0;"><i class="fas fa-link"></i> TARGET URL FOR RECONNAISSANCE</label>
+                                <a href="https://github.com/Samik-Parajuli/Projects/tree/main/05-subdomain-url-ssrf-parser" target="_blank" rel="noopener noreferrer" class="tool-opt-btn" style="color:var(--primary); border-color:var(--primary);">
+                                    <i class="fab fa-github"></i> View CLI &amp; Code on GitHub &nearr;
+                                </a>
+                            </div>
+                            <input type="text" id="urlParserInput" placeholder="e.g. https://admin.stage.corp.trybankme.thm:8443/api/v2/transfer?account=9021&amp;token=xyz#debug" autocomplete="off" value="https://admin.stage.corp.trybankme.thm:8443/api/v2/transfer?account=9021&amp;token=xyz#debug">
+                            
+                            <div class="url-parts-grid" id="urlPartsGrid">
+                                <!-- Populated dynamically -->
+                            </div>
+
+                            <div class="url-ssrf-box" id="urlSsrfBox">
+                                <h4 class="ssrf-title"><i class="fas fa-skull"></i> SSRF / Open-Redirect Mutation Payloads</h4>
+                                <div class="ssrf-payloads-list" id="ssrfPayloadsList">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. Regex Pattern Extractor -->
+                    <div class="project-pane" id="paneProjRegex" hidden>
+                        <div class="tool-controls-bar">
+                            <span class="tool-label">EXTRACT PATTERN:</span>
+                            <div class="tool-options" id="regexPresets">
+                                <button class="tool-opt-btn active" data-regex="ipv4">IPv4 Addresses</button>
+                                <button class="tool-opt-btn" data-regex="email">Email Addresses</button>
+                                <button class="tool-opt-btn" data-regex="url">Web URLs</button>
+                                <button class="tool-opt-btn" data-regex="md5">MD5 Hashes</button>
+                                <button class="tool-opt-btn" data-regex="sha256">SHA-256 Hashes</button>
+                                <button class="tool-opt-btn" data-regex="jwt">JWT Tokens</button>
+                                <button class="tool-opt-btn" data-regex="aws">AWS Access Keys</button>
+                                <button class="tool-opt-btn" data-regex="custom">Custom Regex</button>
+                            </div>
+                            <a href="https://github.com/Samik-Parajuli/Projects/tree/main/06-cyber-regex-artifact-extractor" target="_blank" rel="noopener noreferrer" class="tool-opt-btn" style="margin-left:auto; color:var(--primary); border-color:var(--primary);">
+                                <i class="fab fa-github"></i> View CLI &amp; Code on GitHub &nearr;
+                            </a>
+                        </div>
+                        <div class="custom-regex-bar" id="customRegexBar" hidden>
+                            <label for="customRegexInput"><i class="fas fa-terminal"></i> REGEX PATTERN &amp; FLAGS:</label>
+                            <div class="custom-regex-inputs">
+                                <input type="text" id="customRegexInput" placeholder="e.g. thm\{[a-zA-Z0-9_-]+\}">
+                                <input type="text" id="customRegexFlags" placeholder="gi" value="g" style="max-width: 80px;">
+                            </div>
+                        </div>
+                        <div class="tool-io-grid">
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label for="regexInput"><i class="fas fa-file-code"></i> RAW LOG OR UNSTRUCTURED TEXT</label>
+                                    <button class="tool-inline-btn" id="clearRegexBtn" type="button">Clear</button>
+                                </div>
+                                <textarea id="regexInput" placeholder="Paste source code, network dump, access log, or memory string to extract matches..."></textarea>
+                            </div>
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label><i class="fas fa-list-check"></i> EXTRACTED MATCHES (<span id="regexMatchCount">0</span>)</label>
+                                    <button class="tool-inline-btn" id="copyRegexMatchesBtn" type="button"><i class="fas fa-copy"></i> Copy Matches</button>
+                                </div>
+                                <div class="regex-matches-panel" id="regexMatchesOut">
+                                    <p class="hash-hint">Select a preset pattern or input text to view extracted indicators.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7. Forensic Timestamp Converter -->
+                    <div class="project-pane" id="paneProjTime" hidden>
+                        <div class="tool-single-form">
+                            <div class="time-input-row">
+                                <div class="time-input-group">
+                                    <label for="timeInput"><i class="fas fa-clock"></i> TIMESTAMP OR DATE STRING</label>
+                                    <input type="text" id="timeInput" placeholder="Unix (1724457600), ISO 8601 (2026-08-24T00:00:00Z), or Windows FileTime" autocomplete="off">
+                                </div>
+                                <div class="time-quick-actions">
+                                    <button class="cyber-btn primary small" id="timeNowBtn" type="button"><i class="fas fa-bolt"></i> Current Epoch</button>
+                                    <button class="tool-opt-btn" id="timeSampleWin" type="button">Sample Windows 64-bit</button>
+                                    <a href="https://github.com/Samik-Parajuli/Projects/tree/main/07-forensic-timestamp-converter" target="_blank" rel="noopener noreferrer" class="tool-opt-btn" style="color:var(--primary); border-color:var(--primary);">
+                                        <i class="fab fa-github"></i> CLI &amp; Code &nearr;
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="time-results-grid" id="timeResultsGrid">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 8. JSON Formatter & Sanitizer -->
+                    <div class="project-pane" id="paneProjJson" hidden>
+                        <div class="tool-controls-bar">
+                            <span class="tool-label">ACTIONS:</span>
+                            <div class="tool-options">
+                                <button class="tool-opt-btn active" id="jsonFormatBtn" type="button"><i class="fas fa-indent"></i> Beautify (2 Spaces)</button>
+                                <button class="tool-opt-btn" id="jsonFormat4Btn" type="button"><i class="fas fa-indent"></i> Beautify (4 Spaces)</button>
+                                <button class="tool-opt-btn" id="jsonMinifyBtn" type="button"><i class="fas fa-compress"></i> Minify (One-Line)</button>
+                                <button class="tool-opt-btn" id="jsonSampleBtn" type="button"><i class="fas fa-file-code"></i> Load Sample</button>
+                            </div>
+                            <a href="https://github.com/Samik-Parajuli/Projects/tree/main/08-json-security-sanitizer" target="_blank" rel="noopener noreferrer" class="tool-opt-btn" style="margin-left:auto; color:var(--primary); border-color:var(--primary);">
+                                <i class="fab fa-github"></i> View CLI &amp; Code on GitHub &nearr;
+                            </a>
+                        </div>
+                        <div class="tool-io-grid">
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label for="jsonInput"><i class="fas fa-arrow-right-to-bracket"></i> RAW / UNFORMATTED JSON</label>
+                                    <button class="tool-inline-btn" id="clearJsonBtn" type="button">Clear</button>
+                                </div>
+                                <textarea id="jsonInput" placeholder='Paste unformatted or escaped JSON (e.g. {"status":"ok","exploit":"cwe-362","threads":16,"targets":["admin","api"]})...'></textarea>
+                            </div>
+                            <div class="tool-io-box">
+                                <div class="io-header">
+                                    <label><i class="fas fa-check-double"></i> VALIDATED FORMATTED OUTPUT</label>
+                                    <button class="tool-inline-btn" id="copyJsonBtn" type="button"><i class="fas fa-copy"></i> Copy Output</button>
+                                </div>
+                                <div id="jsonStatusBanner" class="json-status-banner"></div>
+                                <pre class="json-output-viewer" id="jsonOutput">// Formatted json will display here</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tactical Footer -->
+            <footer class="tactical-footer">
+                <div class="footer-top">
+                    <div class="footer-col brand-col">
+                        <div class="footer-logo">
+                            <span class="prompt-sym">#</span> sameekey<span class="cursor-blink"></span>
+                        </div>
+                        <p class="footer-desc">
+                            Offensive security engineering &amp; real-world vulnerability research portfolio.
+                            Rooting machines, discovering zero-days, and documenting field tradecraft.
+                        </p>
+                    </div>
+
+                    <div class="footer-col links-col">
+                        <div class="footer-heading">// SYSTEM NAVIGATION</div>
+                        <ul class="footer-nav-list">
+                            <li><a href="index.html#about"><i class="fas fa-angle-right"></i> [01] Whoami Dossier</a></li>
+                            <li><a href="index.html#achievements"><i class="fas fa-angle-right"></i> [02] Competitive Proof</a></li>
+                            <li><a href="index.html#assessments"><i class="fas fa-angle-right"></i> [04] Flagship Assessments</a></li>
+                            <li><a href="writeups.html"><i class="fas fa-angle-right"></i> [05] CTF Walkthroughs (31)</a></li>
+                            <li><a href="projects.html"><i class="fas fa-angle-right"></i> [06] Security Projects (8)</a></li>
+                            <li><a href="index.html#resume"><i class="fas fa-angle-right"></i> [07] Operator CV</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col contact-col">
+                        <div class="footer-heading">// COMMS DISPATCH</div>
+                        <p class="footer-email">
+                            <i class="fas fa-envelope"></i> parajulisameek@gmail.com
+                        </p>
+                        <p class="footer-loc">
+                            <i class="fas fa-location-crosshairs"></i> Lalitpur / Kathmandu, Nepal
+                        </p>
+                        <div class="footer-socials">
+                            <a href="https://github.com/Samik-Parajuli" target="_blank" rel="noopener" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                            <a href="https://www.linkedin.com/in/sameek-parajuli-753b9a30a/" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" aria-label="TryHackMe"><i class="fas fa-shield-cat"></i></a>
+                            <a href="https://www.instagram.com/sameekey/" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-bottom">
+                    <div class="footer-copy">
+                        &copy; 2026 Sameek Parajuli (sameekey). Hand-crafted in Kali Linux with vanilla JS, CSS3, &amp; HTML5.
+                    </div>
+                    <div class="footer-badges">
+                        <span class="badge diff-hard">NO COOKIES / TRACKERS</span>
+                        <span class="badge ghost">100% AIR-GAPPED TOOLS</span>
+                        <a href="#top" class="back-to-top" title="Scroll to Top"><i class="fas fa-arrow-up"></i> TOP</a>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Quick Terminal CLI Modal (Hotkey: `) -->
+    <div class="cli-overlay" id="cliOverlay" hidden>
+        <div class="cli-modal" role="dialog" aria-modal="true" aria-label="Tactical Terminal Console">
+            <div class="cli-titlebar">
+                <div class="cli-title">
+                    <span class="cli-dot red"></span><span class="cli-dot yellow"></span><span class="cli-dot green"></span>
+                    <span class="cli-title-text"><i class="fas fa-terminal"></i> sameekey@kali:~ (Security Console v2.6.4)</span>
+                </div>
+                <button class="cli-close-btn" id="cliCloseBtn" type="button" aria-label="Close terminal">&times;</button>
+            </div>
+            <div class="cli-body" id="cliBody">
+                <div class="cli-welcome">
+                    Type <span class="cli-cmd-highlight">help</span> for available commands, <span class="cli-cmd-highlight">projects</span> to inspect tools, or <span class="cli-cmd-highlight">cat &lt;slug&gt;</span> to read writeups.
+                </div>
+            </div>
+            <div class="cli-input-line">
+                <span class="cli-prompt-sym">sameekey@kali:~$</span>
+                <input type="text" id="cliInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Terminal command input">
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Core Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="writeups/writeups-data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

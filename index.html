@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="red">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#06070a">
+    <title>Sameek Parajuli // Offensive Security &amp; Penetration Testing Specialist</title>
+    <meta name="description" content="Sameek Parajuli (sameekey) — Cybersecurity researcher, penetration tester, offensive security practitioner, and TryHackMe Sapphire League #1 champion. 31+ CTF and lab writeups.">
+    <meta name="author" content="Sameek Parajuli">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Sameek Parajuli // Cybersecurity Portfolio">
+    <meta property="og:description" content="Offensive security, web application penetration testing, verified credentials, and 31+ in-depth CTF writeups.">
+    <meta property="og:image" content="Images/profile.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128273;</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        (function () {
+            try {
+                var savedTheme = localStorage.getItem('theme') || 'red';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body>
+    <!-- Tactical Boot Sequence -->
+    <div class="boot" id="boot" aria-hidden="true">
+        <div class="boot-window">
+            <div class="term-bar">
+                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <span class="term-title">boot -- /dev/cybersec-ops</span>
+                <button class="boot-skip-btn" id="bootSkipBtn" type="button">[ESC] Skip</button>
+            </div>
+            <pre class="boot-log" id="bootLog"></pre>
+        </div>
+    </div>
+
+    <!-- Visual Overlays -->
+    <div class="scanlines" id="scanlines" aria-hidden="true"></div>
+    <div class="crt-glow" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+    <div class="particles" id="particles-js"></div>
+    <canvas id="matrixCanvas" class="matrix-canvas" hidden></canvas>
+
+    <!-- Top Command Telemetry Ticker -->
+    <header class="top-telemetry">
+        <div class="telemetry-inner">
+            <div class="telemetry-item live-pulse">
+                <span class="pulse-dot"></span>
+                <span class="telemetry-label">SYSTEM:</span>
+                <span class="telemetry-val">ONLINE // ENCRYPTED</span>
+            </div>
+            <div class="telemetry-item">
+                <i class="fas fa-trophy highlight-gold"></i>
+                <span class="telemetry-label">THM LEAGUES:</span>
+                <span class="telemetry-val">#1 SAPPHIRE &amp; RUBY | #2 IN NEPAL (AUG 2026)</span>
+            </div>
+            <div class="telemetry-item">
+                <i class="fas fa-skull"></i>
+                <span class="telemetry-label">STATUS:</span>
+                <span class="telemetry-val">OPEN TO OFFENSIVE SECURITY &amp; RED TEAM ROLES</span>
+            </div>
+            <div class="telemetry-item hide-mobile">
+                <i class="fas fa-terminal"></i>
+                <span class="telemetry-label">CLI:</span>
+                <span class="telemetry-val">PRESS <kbd>`</kbd> OR <kbd>/</kbd></span>
+            </div>
+            <div class="telemetry-item">
+                <i class="fas fa-location-crosshairs"></i>
+                <span class="telemetry-val">KATHMANDU, NP</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="layout-container">
+        <!-- Tactical Left Navigation -->
+        <nav class="left-nav" id="leftNav">
+            <div class="logo">
+                <a href="#about" class="logo-link">
+                    <span class="logo-prompt">#</span><span class="logo-name" data-text="sameekey">sameekey</span>
+                    <span class="cursor-blink"></span>
+                </a>
+            </div>
+
+            <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+                <span class="nav-toggle-text">NAV</span>
+            </button>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#about" class="active"><i class="fas fa-user-secret"></i> <span>[01] Whoami</span></a></li>
+                <li><a href="#achievements"><i class="fas fa-award"></i> <span>[02] Proof</span></a></li>
+                <li><a href="#skills"><i class="fas fa-microchip"></i> <span>[03] Arsenal</span></a></li>
+                <li><a href="#assessments"><i class="fas fa-crosshairs"></i> <span>[04] Ops &amp; Reports</span></a></li>
+                <li><a href="#writeups"><i class="fas fa-scroll"></i> <span>[05] Writeups</span> <span class="nav-badge" id="navWriteupCount">31</span></a></li>
+                <li><a href="#projects"><i class="fas fa-cube"></i> <span>[06] Projects</span> <span class="nav-badge" style="background:var(--primary); color:#06070a; font-weight:800;">8</span></a></li>
+                <li><a href="#resume"><i class="fas fa-file-shield"></i> <span>[07] Dossier</span></a></li>
+            </ul>
+
+            <!-- Quick HUD Controllers -->
+            <div class="nav-hud-controls">
+                <button class="hud-btn" id="cliLaunchBtn" type="button" title="Open Interactive CLI Terminal (Hotkey: `)">
+                    <i class="fas fa-terminal"></i> <span>CLI [~]</span>
+                </button>
+                <button class="hud-btn" id="sfxToggleBtn" type="button" title="Toggle Cyber Audio Synthesizer (Hotkey: S)">
+                    <i class="fas fa-volume-xmark"></i> <span>SFX: OFF</span>
+                </button>
+                <div class="theme-picker-wrap">
+                    <button class="hud-btn theme-btn" id="themePickerBtn" type="button" title="Change Cyberpunk Palette (Hotkey: T)">
+                        <i class="fas fa-palette"></i> <span>Theme</span>
+                    </button>
+                    <div class="theme-dropdown" id="themeDropdown">
+                        <button class="theme-opt" data-set-theme="red"><span class="swatch red"></span> Blood Red</button>
+                        <button class="theme-opt" data-set-theme="green"><span class="swatch green"></span> Matrix Green</button>
+                        <button class="theme-opt" data-set-theme="cyan"><span class="swatch cyan"></span> Cyber Cyan</button>
+                        <button class="theme-opt" data-set-theme="gold"><span class="swatch gold"></span> Hacker Amber</button>
+                        <button class="theme-opt" data-set-theme="light"><span class="swatch light"></span> Stealth Light</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Links -->
+            <div class="social-links">
+                <a href="https://github.com/Samik-Parajuli" target="_blank" rel="noopener" title="GitHub /Samik-Parajuli" aria-label="GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://www.linkedin.com/in/sameek-parajuli-753b9a30a/" target="_blank" rel="noopener" title="LinkedIn /sameek-parajuli" aria-label="LinkedIn">
+                    <i class="fab fa-linkedin-in"></i>
+                </a>
+                <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" title="TryHackMe /sameekey" aria-label="TryHackMe">
+                    <i class="fas fa-shield-cat"></i>
+                </a>
+                <a href="https://www.instagram.com/sameekey/" target="_blank" rel="noopener" title="Instagram /sameekey" aria-label="Instagram">
+                    <i class="fab fa-instagram"></i>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Mission Control Surface -->
+        <main class="main-content">
+
+            <!-- SECTION 1: ABOUT / OPERATOR WHOAMI -->
+            <section id="about" class="section hero-section" data-aos="fade-up">
+                <!-- 3D Geometric Interactive Canvas Backdrop -->
+                <canvas id="hero3dCanvas" class="hero-3d-canvas" aria-hidden="true"></canvas>
+
+                <div class="hero-grid">
+                    <div class="avatar-column">
+                        <div class="avatar-holocube-wrap" id="heroHolocubeWrap">
+                            <div class="avatar-holocube" id="heroHolocube">
+                                <div class="holo-glare" id="holoGlare"></div>
+                                <div class="avatar-ring"></div>
+                                <div class="avatar-scanline"></div>
+                                <img src="Images/profile.png" alt="Sameek Parajuli" class="profile-pic" loading="eager">
+                                <div class="avatar-tag">
+                                    <span class="pulse-dot"></span>
+                                    <span>#1 SAPPHIRE &amp; RUBY VERIFIED</span>
+                                </div>
+                            </div>
+                            <!-- Floating 3D Depth Badges (motionsites 3d style) -->
+                            <div class="floating-badge badge-top" data-depth="45">
+                                <i class="fas fa-shield-halved"></i> <span>RED TEAM OPERATOR</span>
+                            </div>
+                            <div class="floating-badge badge-bottom" data-depth="60">
+                                <i class="fas fa-crosshairs"></i> <span>THM LEAGUES #1</span>
+                            </div>
+                        </div>
+
+                        <div class="avatar-quick-actions">
+                            <button class="cyber-btn primary full" id="heroOpenCliBtn" type="button">
+                                <i class="fas fa-terminal"></i> Execute CLI Shell
+                            </button>
+                            <a class="cyber-btn ghost full" href="RESUME/Samik_Parajuli_CV.pdf" download>
+                                <i class="fas fa-file-pdf"></i> Download CV (.pdf)
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="dossier-column">
+                        <div class="term-prompt-header">
+                            <span class="prompt-user">sameekey@kali</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">#</span>
+                            <span class="prompt-cmd">whoami --verbose --clearance=omega</span>
+                        </div>
+
+                        <h1 class="hero-name glitch" data-text="SAMEEK PARAJULI">SAMEEK PARAJULI</h1>
+                        <h2 class="hero-role"><span class="role-bracket">[</span><span id="typedRole"></span><span class="cursor-blink"></span><span class="role-bracket">]</span></h2>
+
+                        <div class="bio-text">
+                            <p>
+                                I’m a hands-on cybersecurity practitioner obsessed with understanding how systems break, why they break, and how far an attacker can push them. My focus is <strong>Offensive Security, Black-Box Web Application Penetration Testing, and real-world exploitation</strong>.
+                            </p>
+                            <p>
+                                I learn by attacking—not memorizing slide decks. From web vulnerabilities and race conditions to WMI persistence, BITS jobs, blind XSS, and low-level NTFS USN Journal analysis, I turn every challenge into something I can investigate, exploit, document, and learn from.
+                            </p>
+                            <p>
+                                I’ve ranked <strong>#1 in both the TryHackMe Sapphire and Ruby Leagues</strong>, placed <strong>2nd in Nepal during August</strong>, completed the intensive <strong>14-day Hacker Holidays Byte Lotus exploitation series</strong>, and published <strong>31+ technical writeups</strong> documenting my research, methodologies, and findings.
+                            </p>
+                            <p>
+                                For me, cybersecurity isn’t just about finding vulnerabilities. It’s about thinking like the system’s adversary, breaking assumptions, and continuously pushing deeper.
+                            </p>
+                        </div>
+
+                        <!-- High Impact Stats HUD -->
+                        <div class="stat-hud-grid">
+                            <div class="hud-stat-box highlight" data-aos="zoom-in" data-aos-delay="50">
+                                <span class="hud-stat-num">#1</span>
+                                <span class="hud-stat-label">Sapphire &amp; Ruby</span>
+                                <span class="hud-stat-sub">#1 in Both Global Arenas</span>
+                            </div>
+                            <div class="hud-stat-box highlight" data-aos="zoom-in" data-aos-delay="100">
+                                <span class="hud-stat-num">#2</span>
+                                <span class="hud-stat-label">Rank in Nepal</span>
+                                <span class="hud-stat-sub">August 2026 Scoreboard</span>
+                            </div>
+                            <div class="hud-stat-box" data-aos="zoom-in" data-aos-delay="150">
+                                <span class="hud-stat-num">100%</span>
+                                <span class="hud-stat-label">Byte Lotus Rooted</span>
+                                <span class="hud-stat-sub">14-Day Challenge Series</span>
+                            </div>
+                            <div class="hud-stat-box" data-aos="zoom-in" data-aos-delay="200">
+                                <span class="hud-stat-num" id="statWriteups">31+</span>
+                                <span class="hud-stat-label">Technical Writeups</span>
+                                <span class="hud-stat-sub">Documented Exploits &amp; Labs</span>
+                            </div>
+                        </div>
+
+                        <div class="hero-actions-bar">
+                            <a class="cyber-btn primary" href="#writeups"><i class="fas fa-scroll"></i> Explore 31 Writeups</a>
+                            <a class="cyber-btn accent" href="#achievements"><i class="fas fa-trophy"></i> Inspect Proof</a>
+                            <button class="cyber-btn ghost" id="copyEmail" data-email="parajulisameek@gmail.com" type="button">
+                                <i class="fas fa-copy"></i> <span>Copy Email</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: PROOF & ACCREDITATIONS -->
+            <section id="achievements" class="section" data-aos="fade-up">
+                <div class="section-header">
+                    <div class="section-tag">// VERIFIED CREDENTIALS</div>
+                    <h2 class="term-heading">Field Proof &amp; Competitive Accreditations</h2>
+                    <p class="section-sub">Verifiable achievements, competitive scoreboard placements, and certified lab completions.</p>
+                </div>
+
+                <div class="proof-grid">
+                    <!-- Certificate Card -->
+                    <article class="proof-card cert-card" data-aos="fade-right">
+                        <div class="proof-media-wrapper zoomable" data-zoom-src="Images/thm_hacker_holidays_cert.png" title="Click to enlarge certificate">
+                            <img src="Images/thm_hacker_holidays_cert.png" alt="TryHackMe Hacker Holidays Certificate of Completion" loading="lazy">
+                            <div class="zoom-badge"><i class="fas fa-search-plus"></i> ENLARGE</div>
+                        </div>
+                        <div class="proof-content">
+                            <div class="proof-topline">
+                                <span class="badge diff-hard">Official Certificate</span>
+                                <span class="badge ghost">ID: THM-CVMBUOSYUB</span>
+                            </div>
+                            <h3 class="proof-title">TryHackMe: Hacker Holidays — The Byte Lotus Hotel</h3>
+                            <p class="proof-desc">
+                                Verified Certificate of Completion issued by TryHackMe. Completed the comprehensive 14-day offensive security series, rooting every challenge room
+                                covering Azure SAS Token abuses, Time-of-Check-Time-of-Use (TOCTOU) race conditions, WMI persistence mechanisms, and Zip Slip remote code execution.
+                            </p>
+                            <div class="proof-actions">
+                                <a href="Images/THM-CVMBUOSYUB.pdf" target="_blank" rel="noopener" class="card-link primary">
+                                    <i class="fas fa-file-pdf"></i> View Original PDF
+                                </a>
+                                <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" class="card-link">
+                                    <i class="fas fa-external-link-alt"></i> Verify on TryHackMe
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Sapphire League Card -->
+                    <article class="proof-card league-card" data-aos="fade-left">
+                        <div class="proof-media-wrapper zoomable" data-zoom-src="Images/sapphire_league_rank1.png" title="Click to enlarge leaderboard">
+                            <img src="Images/sapphire_league_rank1.png" alt="TryHackMe Sapphire League #1 Rank" loading="lazy">
+                            <div class="zoom-badge"><i class="fas fa-search-plus"></i> ENLARGE</div>
+                        </div>
+                        <div class="proof-content">
+                            <div class="proof-topline">
+                                <span class="badge diff-medium">Scoreboard Champion</span>
+                                <span class="badge">Week 1 Leader</span>
+                            </div>
+                            <h3 class="proof-title">Sapphire League: Rank #1 (480 Points)</h3>
+                            <p class="proof-desc">
+                                Captured the #1 rank in the competitive TryHackMe Sapphire League, outpacing hundreds of active global competitors with 480 verified points across
+                                offensive web exploitation, privilege escalation, and advanced penetration testing modules.
+                            </p>
+                            <div class="proof-actions">
+                                <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" class="card-link primary">
+                                    <i class="fas fa-shield-cat"></i> View Live Profile
+                                </a>
+                                <button class="card-link" id="zoomLeagueBtn" type="button">
+                                    <i class="fas fa-expand"></i> Inspect Leaderboard
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- SECTION 3: SKILLS ARSENAL -->
+            <section id="skills" class="section" data-aos="fade-up">
+                <div class="section-header">
+                    <div class="section-tag">// CAPABILITIES MATRIX</div>
+                    <h2 class="term-heading">Cybersecurity Arsenal &amp; Tooling</h2>
+                    <p class="section-sub">Offensive tradecraft, web application exploitation, and custom security engineering tooling.</p>
+                </div>
+
+                <!-- Interactive Category Filter Tabs -->
+                <div class="arsenal-tabs" id="arsenalTabs">
+                    <button class="arsenal-tab active" data-arsenal="all" type="button"><i class="fas fa-border-all"></i> Complete Matrix</button>
+                    <button class="arsenal-tab" data-arsenal="offensive" type="button"><i class="fas fa-skull"></i> Offensive &amp; Web</button>
+                    <button class="arsenal-tab" data-arsenal="ad" type="button"><i class="fas fa-sitemap"></i> Active Directory &amp; Red Team</button>
+                    <button class="arsenal-tab" data-arsenal="crypto" type="button"><i class="fas fa-key"></i> Crypto &amp; Steg</button>
+                    <button class="arsenal-tab" data-arsenal="infra" type="button"><i class="fas fa-network-wired"></i> Network &amp; Infra</button>
+                    <button class="arsenal-tab" data-arsenal="dev" type="button"><i class="fas fa-code"></i> Tooling &amp; Scripting</button>
+                </div>
+
+                <div class="arsenal-grid" id="arsenalGrid">
+                    <!-- Offensive 1 -->
+                    <div class="skill-card" data-domain="offensive">
+                        <div class="skill-icon-header">
+                            <i class="fas fa-bug"></i>
+                            <span class="skill-level-pill">Expert</span>
+                        </div>
+                        <h3>Web Application Exploitation</h3>
+                        <p>Black-box vulnerability research, SQL Injection (Blind/Time-based/Union), Cross-Site Scripting (Stored/DOM/Blind), TOCTOU Race Conditions, and Zip Slip arbitrary file overwrite.</p>
+                        <div class="skill-tech-tags">
+                            <span class="tech-tag">Burp Suite Pro</span>
+                            <span class="tech-tag">SQLMap</span>
+                            <span class="tech-tag">ffuf</span>
+                            <span class="tech-tag">Turbo Intruder</span>
+                            <span class="tech-tag">OWASP Top 10</span>
+                        </div>
+                        <div class="proficiency-bar"><div class="fill" style="width: 95%;"></div></div>
+                    </div>
+
+                    <!-- Offensive 2 -->
+                    <div class="skill-card" data-domain="offensive">
+                        <div class="skill-icon-header">
+                            <i class="fas fa-user-ninja"></i>
+                            <span class="skill-level-pill">Advanced</span>
+                        </div>
+                        <h3>Privilege Escalation &amp; Lateral Movement</h3>
+                        <p>Linux root escalation (capabilities, SUID, wildcards, sudo misconfigurations), Windows token manipulation, Evil-WinRM sessions, and RDP pivoting across segmented networks.</p>
+                        <div class="skill-tech-tags">
+                            <span class="tech-tag">LinPEAS</span>
+                            <span class="tech-tag">WinPEAS</span>
+                            <span class="tech-tag">Evil-WinRM</span>
+                            <span class="tech-tag">NetExec</span>
+                            <span class="tech-tag">Metasploit</span>
+                        </div>
+                        <div class="proficiency-bar"><div class="fill" style="width: 88%;"></div></div>
+                    </div>
+
+                    <!-- AD & Red Team 1 -->
+                    <div class="skill-card" data-domain="ad">
+                        <div class="skill-icon-header">
+                            <i class="fas fa-sitemap"></i>
+                            <span class="skill-level-pill">Advanced</span>
+                        </div>
+                        <h3>Active Directory &amp; Domain Attacks</h3>
+                        <p>Enterprise domain enumeration, BloodHound attack path graphing, Kerberoasting, AS-REP roasting, DCSync credential replication, and Pass-the-Hash/Ticket lateral movement.</p>
+                        <div class="skill-tech-tags">
+                            <span class="tech-tag">BloodHound</span>
+                            <span class="tech-tag">Impacket</span>
+                            <span class="tech-tag">Mimikatz</span>
+                            <span class="tech-tag">Kerbrute</span>
+                            <span class="tech-tag">Certipy</span>
+                        </div>
+                        <div class="proficiency-bar"><div class="fill" style="width: 90%;"></div></div>
+                    </div>
+
+                    <!-- AD & Red Team 2 -->
+                    <div class="skill-card" data-domain="ad">
+                        <div class="skill-icon-header">
+                            <i class="fas fa-network-wired"></i>
+                            <span class="skill-level-pill">Advanced</span>
+                        </div>
+                        <h3>API Security &amp; Cloud SSRF Exploitation</h3>
+                        <p>Black-box REST/GraphQL API fuzzing, Mass Assignment, Broken Object Level Authorization (BOLA/IDOR), JWT key confusion, and SSRF cloud metadata bypass (AWS IMDSv1/v2).</p>
+                        <div class="skill-tech-tags">
+                            <span class="tech-tag">Postman</span>
+                            <span class="tech-tag">Kiterunner</span>
+                            <span class="tech-tag">GraphQLmap</span>
+                            <span class="tech-tag">SSRF Payloads</span>
+                            <span class="tech-tag">JWT_Tool</span>
+                        </div>
+                        <div class="proficiency-bar"><div class="fill" style="width: 88%;"></div></div>
+                    </div>
+
+                    <!-- Crypto & Steg -->
+                    <div class="skill-card" data-domain="crypto">
+                        <div class="skill-icon-header">
+                            <i class="fas fa-lock"></i>
+                            <span class="skill-level-pill">Proficient</span>
+                        </div>
+                        <h3>Cryptography &amp; Steganography</h3>
+                        <p>Cracking hashes with GPU acceleration, identifying zero-width steganographic payloads, recovering weak RSA keys, Azure SAS token auditing, and cipher script automation.</p>
+                        <div class="skill-tech-tags">
+                            <span class="tech-tag">CyberChef</span>
+                            <span class="tech-tag">Hashcat</span>
+                            <span class="tech-tag">John The Ripper</span>
+                            <span class="tech-tag">Steghide</span>
+                            <span class="tech-tag">Zsteg</span>
+                        </div>
+                        <div class="proficiency-bar"><div class="fill" style="width: 84%;"></div></div>
+                    </div>
+
+                    <!-- Network & Infra -->
+                    <div class="skill-card" data-domain="infra">
+                        <div class="skill-icon-header">
+                            <i class="fas fa-network-wired"></i>
+                            <span class="skill-level-pill">Advanced</span>
+                        </div>
+                        <h3>Network Security &amp; Pivoting</h3>
+                        <p>Advanced Nmap NSE reconnaissance, packet stream reconstruction in Wireshark, iptables firewall bypasses, SSH dynamic port forwarding (SOCKS5), and FortiClient SSL VPNs.</p>
+                        <div class="skill-tech-tags">
+                            <span class="tech-tag">Nmap</span>
+                            <span class="tech-tag">Wireshark</span>
+                            <span class="tech-tag">Tcpdump</span>
+                            <span class="tech-tag">iptables</span>
+                            <span class="tech-tag">Chisel / Proxychains</span>
+                        </div>
+                        <div class="proficiency-bar"><div class="fill" style="width: 88%;"></div></div>
+                    </div>
+
+                    <!-- Tooling & Dev -->
+                    <div class="skill-card" data-domain="dev">
+                        <div class="skill-icon-header">
+                            <i class="fas fa-code-compare"></i>
+                            <span class="skill-level-pill">Advanced</span>
+                        </div>
+                        <h3>Security Scripting &amp; Exploit Dev</h3>
+                        <p>Authoring custom exploit automation in Python 3 (concurrent race-condition drivers, brute-forcers, decoders), Bash pipeline scripting, and PowerShell administrative tradecraft.</p>
+                        <div class="skill-tech-tags">
+                            <span class="tech-tag">Python 3</span>
+                            <span class="tech-tag">Bash</span>
+                            <span class="tech-tag">PowerShell</span>
+                            <span class="tech-tag">JavaScript / Node</span>
+                            <span class="tech-tag">Kali Linux</span>
+                        </div>
+                        <div class="proficiency-bar"><div class="fill" style="width: 92%;"></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: REAL-WORLD OPS & FLAGSHIP ASSESSMENTS -->
+            <section id="assessments" class="section" data-aos="fade-up">
+                <div class="section-header">
+                    <div class="section-tag">// OPERATIONS &amp; ENGAGEMENTS</div>
+                    <h2 class="term-heading">Flagship Security Assessments</h2>
+                    <p class="section-sub">Formal penetration test reports, technical debriefs, and real-world vulnerability disclosures.</p>
+                </div>
+
+                <div class="projects-grid">
+                    <!-- Featured Project 1: TryBankMe Pentest Report -->
+                    <article class="project-card highlight-card" data-aos="fade-up">
+                        <div class="project-header">
+                            <div class="project-meta-pill">
+                                <span class="badge diff-hard">CRITICAL FINDINGS</span>
+                                <span class="badge ghost">External Black-Box Pentest</span>
+                            </div>
+                            <span class="project-date">August 2026</span>
+                        </div>
+                        <h3 class="project-title">TryBankMe Limited — Core Web Banking Application Security Assessment</h3>
+                        <p class="project-description">
+                            Full external black-box penetration test conducted against TryBankMe's core financial transactions and authentication portal.
+                            Uncovered a <strong>Critical TOCTOU Race Condition</strong> in transaction processing enabling an "infinite money glitch" (account balance multiplication
+                            without deduction), alongside a <strong>High-Severity Unauthenticated SQL Injection</strong> allowing direct administrative dashboard takeover.
+                        </p>
+                        <div class="project-highlights">
+                            <div class="highlight-item"><i class="fas fa-triangle-exclamation"></i> <strong>CWE-362 Race Condition:</strong> Concurrent request exploitation in /api/transfer</div>
+                            <div class="highlight-item"><i class="fas fa-database"></i> <strong>CWE-89 SQL Injection:</strong> Authentication bypass via parameter injection</div>
+                            <div class="highlight-item"><i class="fas fa-file-contract"></i> <strong>Executive Deliverable:</strong> Complete remediation roadmap and audit cleanup</div>
+                        </div>
+                        <div class="project-actions">
+                            <a href="writeups/trybankme-penetration-test-report.html" class="card-link primary">
+                                <i class="fas fa-book-open"></i> Read Full Assessment
+                            </a>
+                            <a href="writeups/trybankme-penetration-test-report.pdf" download class="card-link">
+                                <i class="fas fa-file-pdf"></i> Download Official PDF
+                            </a>
+                            <button class="card-link quick-view-btn" data-slug="trybankme-penetration-test-report" type="button">
+                                <i class="fas fa-eye"></i> Quick Reader
+                            </button>
+                        </div>
+                    </article>
+
+                    <!-- Featured Project 2: Agent P EVILINC Pentest -->
+                    <article class="project-card" data-aos="fade-up" data-aos-delay="100">
+                        <div class="project-header">
+                            <div class="project-meta-pill">
+                                <span class="badge diff-hard">API &amp; HOST EXPLOITATION</span>
+                                <span class="badge ghost">External Penetration Test</span>
+                            </div>
+                            <span class="project-date">August 2026</span>
+                        </div>
+                        <h3 class="project-title">Agent P: EVILINC — Multi-Stage API Attack Chain &amp; Host Foothold</h3>
+                        <p class="project-description">
+                            Full black-box offensive security assessment against EVILINC's target infrastructure. Methodically enumerated undocumented API endpoints,
+                            exploited parameter tampering to forge authenticated access, and escalated an initial web foothold to full host compromise.
+                        </p>
+                        <div class="project-highlights">
+                            <div class="highlight-item"><i class="fas fa-network-wired"></i> <strong>API Reconnaissance:</strong> Systematic endpoint fuzzing, parameter discovery &amp; route mapping</div>
+                            <div class="highlight-item"><i class="fas fa-key"></i> <strong>Authentication Escalation:</strong> Chaining exposed parameters to forge elevated privileges</div>
+                            <div class="highlight-item"><i class="fas fa-terminal"></i> <strong>Host Exploitation:</strong> Transitioning from web exploit to interactive shell execution</div>
+                        </div>
+                        <div class="project-actions">
+                            <a href="writeups/agentp-evilinc-walkthrough.html" class="card-link primary">
+                                <i class="fas fa-book-open"></i> Read Full Assessment
+                            </a>
+                            <a href="writeups/agentp-evilinc-walkthrough.pdf" download class="card-link">
+                                <i class="fas fa-file-pdf"></i> Download PDF
+                            </a>
+                            <button class="card-link quick-view-btn" data-slug="agentp-evilinc-walkthrough" type="button">
+                                <i class="fas fa-eye"></i> Quick Reader
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- SECTION 5: WRITEUPS & WALKTHROUGHS ARCHIVE -->
+            <section id="writeups" class="section" data-aos="fade-up">
+                <div class="section-header">
+                    <div class="section-tag">// KNOWLEDGE BASE</div>
+                    <h2 class="term-heading">CTF Walkthroughs &amp; Writeups Archive</h2>
+                    <p class="section-sub">
+                        <span id="writeupCountLive">31</span> comprehensive security walkthroughs rendered directly from source markdown.
+                        Every lab contains verified flags, reproducible commands, and remediation analysis.
+                    </p>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <a href="writeups.html" class="cyber-btn accent small">
+                            <i class="fas fa-arrow-up-right-from-square"></i> Open Dedicated Full-Page Archive (writeups.html)
+                        </a>
+                    </div>
+                </div>
+
+                <!-- GitHub Remote Synchronizer Hub -->
+                <div class="github-command-hub" data-aos="fade-up">
+                    <div class="gh-hub-header">
+                        <div class="gh-hub-title-group">
+                            <i class="fab fa-github gh-hub-icon"></i>
+                            <div>
+                                <h3 class="gh-hub-title">TryHackMe Walkthroughs Remote Repository</h3>
+                                <p class="gh-hub-desc">All 30+ offensive writeups, laboratory proofs, and methodology guides are synchronized live on GitHub.</p>
+                            </div>
+                        </div>
+                        <div class="gh-hub-actions">
+                            <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener" class="cyber-btn primary small">
+                                <i class="fab fa-github"></i> Star &amp; Explore Repo
+                            </a>
+                        </div>
+                    </div>
+                    <div class="gh-clone-bar">
+                        <span class="gh-clone-prompt">$</span>
+                        <code class="gh-clone-code" id="ghCloneCommand">git clone https://github.com/Samik-Parajuli/tryhackme_walkthroughs.git</code>
+                        <button class="cyber-btn ghost small copy-clone-btn" id="copyGhCloneBtn" type="button" title="Copy git clone command">
+                            <i class="fas fa-copy"></i> <span>Copy Clone</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Writeup Controls & Multi-Filter Bar -->
+                <div class="writeup-controls-container">
+                    <div class="search-and-view-row">
+                        <div class="search-box">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="search" id="writeupSearch" placeholder="grep writeups (e.g. TOCTOU, WMI, SQLi, KAPE)... [Hotkey: /]" aria-label="Search writeups" autocomplete="off">
+                            <span class="search-kbd-hint"><kbd>/</kbd></span>
+                        </div>
+
+                        <div class="view-and-sort-controls">
+                            <!-- Sort Selector -->
+                            <div class="sort-select-wrap">
+                                <label for="writeupSort" class="control-label"><i class="fas fa-sort"></i> Sort:</label>
+                                <select id="writeupSort" class="cyber-select">
+                                    <option value="date-desc">Newest First</option>
+                                    <option value="diff-desc">Difficulty (Hard &rarr; Easy)</option>
+                                    <option value="diff-asc">Difficulty (Easy &rarr; Hard)</option>
+                                    <option value="time-desc">Reading Time (Longest)</option>
+                                    <option value="title-asc">Title (A &rarr; Z)</option>
+                                </select>
+                            </div>
+
+                            <!-- Layout Toggle: Cards vs Terminal List -->
+                            <div class="layout-toggle-group">
+                                <button class="layout-btn active" id="viewGridBtn" type="button" title="Card Grid View">
+                                    <i class="fas fa-table-cells-large"></i>
+                                </button>
+                                <button class="layout-btn" id="viewListBtn" type="button" title="Compact Terminal List View">
+                                    <i class="fas fa-list-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Pills -->
+                    <div class="filter-pills-row">
+                        <span class="filter-label"><i class="fas fa-filter"></i> Category:</span>
+                        <div class="filter-chips" id="writeupFilters"></div>
+                    </div>
+
+                    <!-- Difficulty Quick Filter -->
+                    <div class="difficulty-pills-row">
+                        <span class="filter-label"><i class="fas fa-gauge-high"></i> Difficulty:</span>
+                        <div class="diff-chips" id="diffFilters">
+                            <button class="diff-chip active" data-diff="all" type="button">All Difficulties</button>
+                            <button class="diff-chip" data-diff="Easy" type="button"><span class="dot-diff easy"></span> Easy</button>
+                            <button class="diff-chip" data-diff="Medium" type="button"><span class="dot-diff medium"></span> Medium</button>
+                            <button class="diff-chip" data-diff="Hard" type="button"><span class="dot-diff hard"></span> Hard</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Grid View -->
+                <div class="card-grid" id="writeupsGrid"></div>
+
+                <!-- Compact Terminal List View -->
+                <div class="terminal-list-view" id="writeupsListView" hidden>
+                    <div class="terminal-table-header">
+                        <span class="col-status">TYPE</span>
+                        <span class="col-title">WALKTHROUGH TITLE</span>
+                        <span class="col-cat">CATEGORY</span>
+                        <span class="col-diff">DIFFICULTY</span>
+                        <span class="col-date">DATE</span>
+                        <span class="col-time">READ</span>
+                        <span class="col-action">EXECUTE</span>
+                    </div>
+                    <div class="terminal-table-body" id="writeupsTableBody"></div>
+                </div>
+
+                <!-- Interactive Pagination Controls -->
+                <div class="pagination-bar" id="writeupPagination">
+                    <button class="pagination-btn" id="paginationPrevBtn" type="button">
+                        <i class="fas fa-chevron-left"></i> PREV
+                    </button>
+                    <div class="pagination-pages" id="paginationPages"></div>
+                    <button class="pagination-btn" id="paginationNextBtn" type="button">
+                        NEXT <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <span class="pagination-info" id="paginationInfo">Page 1 of 4 (31 Total)</span>
+                </div>
+
+                <!-- Empty Search State -->
+                <div class="empty-state" id="writeupsEmpty" hidden>
+                    <div class="empty-icon"><i class="fas fa-terminal"></i></div>
+                    <p class="term-line">
+                        <span class="prompt-user">sameekey@kali</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+                        <span class="prompt-cmd" id="emptyQueryCmd">grep -ri "query" .</span>
+                    </p>
+                    <p class="empty-msg">grep: 0 matches found in writeup directory.</p>
+                    <button class="cyber-btn ghost small" id="resetSearchBtn" type="button">Reset All Filters</button>
+                </div>
+            </section>
+
+            <!-- SECTION 6: SECURITY ENGINEERING & UTILITY PROJECTS -->
+            <section id="projects" class="section" data-aos="fade-up">
+                <div class="section-header">
+                    <div class="section-tag">// APPLIED RESEARCH &amp; TOOLING</div>
+                    <h2 class="term-heading">Security Projects &amp; Tactical Utilities</h2>
+                    <p class="section-sub">
+                        8 purpose-built, client-side offensive and analysis applications. Designed for real-time penetration testing,
+                        payload analysis, and network calculations with <strong>zero telemetry or backend data egress</strong>.
+                    </p>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <a href="projects.html" class="cyber-btn accent small">
+                            <i class="fas fa-arrow-up-right-from-square"></i> Open Dedicated Engineering Portal (projects.html)
+                        </a>
+                        <a href="https://github.com/Samik-Parajuli" target="_blank" rel="noopener" class="cyber-btn ghost small">
+                            <i class="fab fa-github"></i> Star GitHub Repos
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tactical Engineering Suite Command Hub -->
+                <div class="github-command-hub" data-aos="fade-up">
+                    <div class="gh-hub-header">
+                        <div class="gh-hub-title-group">
+                            <i class="fas fa-microchip gh-hub-icon"></i>
+                            <div>
+                                <h3 class="gh-hub-title">Air-Gapped Client-Side Security Suite</h3>
+                                <p class="gh-hub-desc">All 8 security workstations run entirely in-browser with zero backend dependencies, air-gapped data safety, and zero telemetry egress.</p>
+                            </div>
+                        </div>
+                        <div class="gh-hub-actions">
+                            <a href="https://github.com/Samik-Parajuli/Projects" target="_blank" rel="noopener noreferrer" class="cyber-btn accent small">
+                                <i class="fab fa-github"></i> View Monorepo on GitHub ↗
+                            </a>
+                            <a href="projects.html" class="cyber-btn primary small">
+                                <i class="fas fa-terminal"></i> Launch Full Workstation Portal
+                            </a>
+                        </div>
+                    </div>
+                    <div class="gh-clone-bar">
+                        <span class="gh-clone-prompt">$</span>
+                        <code class="gh-clone-code" id="projectLaunchCmd">git clone https://github.com/Samik-Parajuli/Projects.git</code>
+                        <button class="cyber-btn ghost small copy-clone-btn" id="copyProjectsCloneBtn" type="button" title="Copy git clone command">
+                            <i class="fas fa-copy"></i> <span>Copy Clone</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Project Category Filters -->
+                <div class="writeup-controls-container" style="margin-bottom: 2rem;">
+                    <div class="filter-pills-row">
+                        <span class="filter-label"><i class="fas fa-filter"></i> Category:</span>
+                        <div class="filter-chips" id="projectCategoryFilters">
+                            <button class="chip active" data-project-filter="all" type="button">All Projects <span class="chip-count">8</span></button>
+                            <button class="chip" data-project-filter="auth" type="button">Auth &amp; Crypto <span class="chip-count">1</span></button>
+                            <button class="chip" data-project-filter="appsec" type="button">AppSec &amp; Hardening <span class="chip-count">2</span></button>
+                            <button class="chip" data-project-filter="network" type="button">Network &amp; Infra <span class="chip-count">1</span></button>
+                            <button class="chip" data-project-filter="intel" type="button">Threat Intel <span class="chip-count">1</span></button>
+                            <button class="chip" data-project-filter="forensics" type="button">Forensics &amp; Data <span class="chip-count">3</span></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Cards Grid -->
+                <div class="card-grid" id="projectCardsGrid">
+                    <!-- Project Card 1: JWT Analyzer -->
+                    <article class="card tool-project-card" data-project-cat="auth" data-tool="jwt">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 01]</span>
+                                <span class="badge ghost">Auth &amp; Crypto</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=jwt"><i class="fas fa-id-badge" style="color:var(--primary); margin-right: 0.35rem;"></i> JWT Security Analyzer &amp; Token Auditor</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> Client-Side Evaluator</span>
+                                <span><i class="fas fa-shield-halved"></i> Zero-Telemetry</span>
+                                <span><i class="fas fa-bolt"></i> Instant</span>
+                            </div>
+                            <p class="card-summary">
+                                Full client-side decoder and security auditor for JSON Web Tokens. Parses header, payload, and signature with Base64URL decoding, token expiration checks, and automated vulnerability detection for critical flaws like the <code>alg: none</code> signature bypass and empty secret attacks.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#JWT</span>
+                                <span class="tag">#RFC7519</span>
+                                <span class="tag">#AuthBypass</span>
+                                <span class="tag">#Base64URL</span>
+                                <span class="tag">#Cryptanalysis</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=jwt">
+                                    <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                </a>
+                                <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/01-jwt-security-analyzer" target="_blank" rel="noopener">
+                                    <i class="fab fa-github"></i> Source Code &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Project Card 2: Security Headers -->
+                    <article class="card tool-project-card" data-project-cat="appsec" data-tool="headers">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 02]</span>
+                                <span class="badge ghost">AppSec &amp; Hardening</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=headers"><i class="fas fa-shield-virus" style="color:var(--primary); margin-right: 0.35rem;"></i> HTTP Security Header Scanner &amp; Hardener</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> Live A+ Posture Grading</span>
+                                <span><i class="fas fa-shield-halved"></i> Defense-In-Depth</span>
+                            </div>
+                            <p class="card-summary">
+                                Audits raw server response headers against modern defense-in-depth standards. Evaluates Content-Security-Policy (CSP), Strict-Transport-Security (HSTS), X-Frame-Options, X-Content-Type-Options, and Referrer-Policy with letter grading (A+ to F) and auto-generates copy-paste hardened configs for Nginx and Apache.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#CSP</span>
+                                <span class="tag">#HSTS</span>
+                                <span class="tag">#Clickjacking</span>
+                                <span class="tag">#ServerHardening</span>
+                                <span class="tag">#OWASP</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=headers">
+                                    <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                </a>
+                                <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/02-http-security-header-scanner" target="_blank" rel="noopener">
+                                    <i class="fab fa-github"></i> Source Code &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Project Card 3: CIDR / IP Calculator -->
+                    <article class="card tool-project-card" data-project-cat="network" data-tool="cidr">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 03]</span>
+                                <span class="badge ghost">Network &amp; Infra</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=cidr"><i class="fas fa-network-wired" style="color:var(--primary); margin-right: 0.35rem;"></i> CIDR / IP Subnet Calculator &amp; Range Engine</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> 32-Bit Bitwise Engine</span>
+                                <span><i class="fas fa-diagram-project"></i> RFC 1918 Scope</span>
+                            </div>
+                            <p class="card-summary">
+                                High-performance IPv4 bitwise calculation engine for penetration testers and network architects. Instant computation of network ID, broadcast address, subnet mask, wildcard mask, usable host ranges, total usable IPs, binary breakdown, and RFC 1918 private vs. public routing classifications.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#CIDR</span>
+                                <span class="tag">#IPv4</span>
+                                <span class="tag">#Subnetting</span>
+                                <span class="tag">#NetworkRecon</span>
+                                <span class="tag">#Bitwise</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=cidr">
+                                    <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                </a>
+                                <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/03-cidr-subnet-calculator" target="_blank" rel="noopener">
+                                    <i class="fab fa-github"></i> Source Code &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Project Card 4: CVE Intelligence Radar -->
+                    <article class="card tool-project-card" data-project-cat="intel" data-tool="cve">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 04]</span>
+                                <span class="badge ghost">Threat Intel</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=cve"><i class="fas fa-bug" style="color:var(--primary); margin-right: 0.35rem;"></i> CVE Intelligence Radar &amp; Exploit Database</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> CVSS 3.1 Scoring</span>
+                                <span><i class="fas fa-skull"></i> Weaponized PoC Links</span>
+                            </div>
+                            <p class="card-summary">
+                                Threat intelligence and vulnerability lookup engine covering weaponized CVEs (Log4Shell, EternalBlue, ProxyLogon, XZ Backdoor, Heartbleed). Fetches CVSS scores, affected software matrix, vulnerability classes, exploitation vectors, and direct deep-links to NVD, CISA KEV, Exploit-DB, and GitHub PoCs.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#CVE</span>
+                                <span class="tag">#CVSS</span>
+                                <span class="tag">#NVD</span>
+                                <span class="tag">#ExploitDB</span>
+                                <span class="tag">#ThreatIntel</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=cve">
+                                    <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                </a>
+                                <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/04-cve-intelligence-radar" target="_blank" rel="noopener">
+                                    <i class="fab fa-github"></i> Source Code &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Project Card 5: URL / Subdomain Parser -->
+                    <article class="card tool-project-card" data-project-cat="appsec" data-tool="url">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 05]</span>
+                                <span class="badge ghost">AppSec &amp; SSRF</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=url"><i class="fas fa-link" style="color:var(--primary); margin-right: 0.35rem;"></i> Subdomain &amp; URL SSRF/Open-Redirect Parser</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> RFC 3986 Disassembly</span>
+                                <span><i class="fas fa-radiation"></i> Cloud Metadata Payloads</span>
+                            </div>
+                            <p class="card-summary">
+                                Offensive URL disassembly and parameter auditor designed for bug bounty recon, Server-Side Request Forgery (SSRF) payload construction, and open-redirect exploitation. Breaks URLs into protocol, port, TLD, subdomain hierarchy, path, hash, and interactive query parameter matrix.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#SSRF</span>
+                                <span class="tag">#OpenRedirect</span>
+                                <span class="tag">#URLParsing</span>
+                                <span class="tag">#BugBounty</span>
+                                <span class="tag">#Recon</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=url">
+                                     <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                 </a>
+                                 <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/05-subdomain-url-ssrf-parser" target="_blank" rel="noopener">
+                                     <i class="fab fa-github"></i> Source Code &nearr;
+                                 </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Project Card 6: Regex Artifact Extractor -->
+                    <article class="card tool-project-card" data-project-cat="forensics" data-tool="regex">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 06]</span>
+                                <span class="badge ghost">Forensics &amp; Data</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=regex"><i class="fas fa-filter" style="color:var(--primary); margin-right: 0.35rem;"></i> Cyber Regex Pattern &amp; Artifact Extractor</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> PCRE Triage Engine</span>
+                                <span><i class="fas fa-magnifying-glass"></i> IOC Deduplication</span>
+                            </div>
+                            <p class="card-summary">
+                                Digital forensics triage utility for rapid IOC extraction from unformatted PCAP dumps, memory triage outputs, log files, and source code. Features pre-compiled security regex presets for IPv4 addresses, MD5/SHA256 hashes, JWT tokens, email addresses, AWS access keys, and custom PCRE extraction.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#Regex</span>
+                                <span class="tag">#Forensics</span>
+                                <span class="tag">#IOCs</span>
+                                <span class="tag">#ThreatHunting</span>
+                                <span class="tag">#Triage</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=regex">
+                                    <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                </a>
+                                <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/06-cyber-regex-artifact-extractor" target="_blank" rel="noopener">
+                                    <i class="fab fa-github"></i> Source Code &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Project Card 7: Timestamp Converter -->
+                    <article class="card tool-project-card" data-project-cat="forensics" data-tool="time">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 07]</span>
+                                <span class="badge ghost">Forensics &amp; Data</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=time"><i class="fas fa-clock" style="color:var(--primary); margin-right: 0.35rem;"></i> Forensic Timestamp &amp; Active Directory Converter</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> Windows FILETIME 1601</span>
+                                <span><i class="fas fa-calendar-days"></i> Unix Epoch 1970</span>
+                            </div>
+                            <p class="card-summary">
+                                Multi-standard forensic epoch converter built for incident responders and timeline analysts. Interconverts Unix Seconds, Milliseconds, ISO 8601, and Windows 64-bit FILETIME (100-nanosecond intervals since Jan 1, 1601) used in NTFS USN Journals, Registry values, and Active Directory LDAP timestamps.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#DFIR</span>
+                                <span class="tag">#NTFS</span>
+                                <span class="tag">#USNJournal</span>
+                                <span class="tag">#ActiveDirectory</span>
+                                <span class="tag">#Timestamps</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=time">
+                                    <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                </a>
+                                <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/07-forensic-timestamp-converter" target="_blank" rel="noopener">
+                                    <i class="fab fa-github"></i> Source Code &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Project Card 8: JSON Formatter -->
+                    <article class="card tool-project-card" data-project-cat="forensics" data-tool="json">
+                        <div class="card-body">
+                            <div class="card-topline">
+                                <span class="badge" style="background:var(--primary); color:#06070a; font-weight:800;">[TOOL ENGINE 08]</span>
+                                <span class="badge ghost">Forensics &amp; Data</span>
+                                <span class="card-platform" style="color:var(--diff-easy); font-weight:700;"><span class="status-dot"></span> ONLINE</span>
+                            </div>
+                            <h3 class="card-title">
+                                <a href="projects.html?tool=json"><i class="fas fa-code" style="color:var(--primary); margin-right: 0.35rem;"></i> JSON Security Sanitizer &amp; Formatter</a>
+                            </h3>
+                            <div class="card-meta-line">
+                                <span><i class="fas fa-microchip"></i> Line/Col Syntax Val</span>
+                                <span><i class="fas fa-shield-halved"></i> Air-Gapped Security</span>
+                            </div>
+                            <p class="card-summary">
+                                Air-gapped JSON validator, beautifier, and minifier engineered for handling sensitive API keys, intercepted HTTP proxy payloads, and JWT claims without cloud leakage. Features precise line and column syntax error detection, whitespace cleanup, and instant one-click payload minification.
+                            </p>
+                            <div class="card-tags">
+                                <span class="tag">#JSON</span>
+                                <span class="tag">#RFC8259</span>
+                                <span class="tag">#API</span>
+                                <span class="tag">#Payloads</span>
+                                <span class="tag">#Sanitization</span>
+                            </div>
+                            <div class="card-actions">
+                                <a class="card-link primary" href="projects.html?tool=json">
+                                    <i class="fas fa-terminal"></i> Launch Workstation &rarr;
+                                </a>
+                                <a class="card-link github" href="https://github.com/Samik-Parajuli/Projects/tree/main/08-json-security-sanitizer" target="_blank" rel="noopener">
+                                    <i class="fab fa-github"></i> Source Code &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- Bottom Portal Launcher Banner -->
+                <div class="github-command-hub" style="margin-top: 2rem;" data-aos="fade-up">
+                    <div class="gh-hub-header">
+                        <div class="gh-hub-title-group">
+                            <i class="fas fa-laptop-code gh-hub-icon"></i>
+                            <div>
+                                <h3 class="gh-hub-title">Ready for Full-Screen Tactical Operations?</h3>
+                                <p class="gh-hub-desc">Launch the dedicated projects portal to access live interactive terminals, exploit mutations, and automated audit reports.</p>
+                            </div>
+                        </div>
+                        <div class="gh-hub-actions">
+                            <a href="projects.html" class="cyber-btn primary">
+                                <i class="fas fa-arrow-up-right-from-square"></i> Open projects.html Workstation &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 7: RESUME / OPERATOR DOSSIER -->
+            <section id="resume" class="section" data-aos="fade-up">
+                <div class="section-header">
+                    <div class="section-tag">// CREDENTIAL SUMMARY</div>
+                    <h2 class="term-heading">Operator Dossier &amp; Resume</h2>
+                    <p class="section-sub">Verified education, certifications, and operational history. Download standard PDF or review below.</p>
+                </div>
+
+                <div class="dossier-card">
+                    <div class="dossier-header-bar">
+                        <div class="dossier-id">
+                            <span class="status-dot"></span>
+                            <span>DOSSIER: SAMEEK_PARAJULI.CV</span>
+                        </div>
+                        <div class="dossier-actions">
+                            <a href="RESUME/Samik_Parajuli_CV.pdf" download class="cyber-btn primary small">
+                                <i class="fas fa-download"></i> Download CV (PDF)
+                            </a>
+                            <button class="cyber-btn ghost small" id="viewResumeCliBtn" type="button">
+                                <i class="fas fa-terminal"></i> Print to CLI
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="dossier-body">
+                        <div class="dossier-col">
+                            <h3 class="dossier-title"><i class="fas fa-graduation-cap"></i> Formal Education</h3>
+                            <div class="timeline-item">
+                                <div class="timeline-date">Current &middot; In Progress</div>
+                                <h4>BSc in Cybersecurity / Information Technology</h4>
+                                <p class="timeline-place">Texas College of Management and IT (Kathmandu, Nepal)</p>
+                                <p class="timeline-desc">Specialized training in computer networks, network defense, penetration testing methodologies, cryptography, and offensive security tradecraft.</p>
+                            </div>
+
+                            <h3 class="dossier-title" style="margin-top: 1.5rem;"><i class="fas fa-medal"></i> Highlights &amp; Honors</h3>
+                            <ul class="dossier-list">
+                                <li><strong>TryHackMe Sapphire League #1 Rank:</strong> Top competitive scoreboard finish (480 points)</li>
+                                <li><strong>Hacker Holidays 100% Completion:</strong> Rooted all 14 enterprise challenge boxes at The Byte Lotus</li>
+                                <li><strong>Black-Box Banking Assessment:</strong> Discovered Critical TOCTOU race condition in TryBankMe</li>
+                                <li><strong>Active Security Researcher:</strong> Authored 31+ step-by-step CTF and lab walkthroughs</li>
+                            </ul>
+                        </div>
+
+                        <div class="dossier-col">
+                            <h3 class="dossier-title"><i class="fas fa-shield-halved"></i> Core Competencies</h3>
+                            <div class="competency-group">
+                                <strong>Offensive Web Security:</strong>
+                                <p>SQLi, Blind XSS, TOCTOU Race Conditions, Zip Slip RCE, IDOR, SSRF, Burp Suite Pro, Metasploit, Nmap</p>
+                            </div>
+                            <div class="competency-group">
+                                <strong>Active Directory &amp; Network Exploitation:</strong>
+                                <p>Kerberoasting, AS-REP Roasting, BloodHound reconnaissance, Evil-WinRM, Pass-the-Hash, SMB relay, Nmap network scanning</p>
+                            </div>
+                            <div class="competency-group">
+                                <strong>System &amp; Scripting:</strong>
+                                <p>Linux/Kali Linux, Windows Server 2019, Active Directory fundamentals, Python 3 exploit development, Bash, PowerShell</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Site Footer -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <p class="footer-cmd">
+                <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+                <span class="prompt-cmd">echo "Defense is good. Offense is mandatory."</span>
+            </p>
+            <div class="footer-socials">
+                <a href="https://github.com/Samik-Parajuli" target="_blank" rel="noopener" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/sameek-parajuli-753b9a30a/" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" aria-label="TryHackMe"><i class="fas fa-shield-cat"></i></a>
+                <a href="https://www.instagram.com/sameekey/" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            </div>
+            <p class="footer-muted">
+                &copy; <span id="year"></span> Sameek Parajuli &middot; Crafted with raw HTML, CSS &amp; JS &middot; Press <kbd>`</kbd> for CLI Terminal
+            </p>
+        </div>
+    </footer>
+
+    <!-- Interactive Kali CLI Terminal Modal -->
+    <div class="cli-modal-overlay" id="cliModal" hidden>
+        <div class="cli-modal-window">
+            <div class="term-bar">
+                <span class="dot red" id="cliCloseDot"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <span class="term-title">sameekey@kali: ~ (interactive shell)</span>
+                <button class="cli-close-btn" id="cliCloseBtn" type="button" aria-label="Close Terminal">&times;</button>
+            </div>
+            <div class="cli-body" id="cliBody">
+                <div class="cli-welcome">
+                    <pre class="cli-banner">
+  ____    _    __  __ _____ _____ _  _______ __   __
+ / ___|  / \  |  \/  | ____| ____| |/ / ____|\ \ / /
+ \___ \ / _ \ | |\/| |  _| |  _| | ' /|  _|   \ V / 
+  ___) / ___ \| |  | | |___| |___| . \| |___   | |  
+ |____/_/   \_\_|  |_|_____|_____|_|\_\_____|  |_|  
+=====================================================
+[*] SAMEEKEY TACTICAL SHELL v3.4 [x86_64-kali-linux]
+[*] Type 'help' for available commands or 'matrix' for digital rain.
+                    </pre>
+                </div>
+                <div id="cliOutput"></div>
+                <div class="cli-input-line">
+                    <span class="prompt-user">sameekey@kali</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+                    <input type="text" id="cliInput" class="cli-input" autocomplete="off" spellcheck="false" autofocus>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- In-Page Writeup Quick-Reader Modal -->
+    <div class="reader-modal-overlay" id="readerModal" hidden>
+        <div class="reader-modal-window">
+            <div class="term-bar">
+                <span class="dot red" id="readerCloseDot"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <span class="term-title" id="readerModalTitle">Writeup Reader</span>
+                <div class="reader-bar-actions">
+                    <a href="#" id="readerPdfLink" download class="reader-bar-btn" hidden><i class="fas fa-file-pdf"></i> Download PDF</a>
+                    <a href="#" id="readerExternalLink" target="_blank" rel="noopener" class="reader-bar-btn"><i class="fas fa-arrow-up-right-from-square"></i> Standalone Page</a>
+                    <button class="reader-bar-btn" id="readerCloseBtn" type="button">&times;</button>
+                </div>
+            </div>
+            <div class="reader-modal-body" id="readerModalBody">
+                <div class="reader-loading">
+                    <i class="fas fa-circle-notch fa-spin"></i> Loading writeup from encrypted volume...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="writeups/writeups-data.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="red">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#06070a">
+    <title>Sameek Parajuli // Security Writeups &amp; Walkthroughs Archive</title>
+    <meta name="description" content="Technical cybersecurity writeups, CTF walkthroughs, exploit guides, and penetration testing analysis by Sameek Parajuli (sameekey).">
+    <meta name="author" content="Sameek Parajuli">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Security Writeups &amp; Walkthroughs Archive // Sameek Parajuli">
+    <meta property="og:description" content="31+ in-depth offensive security and penetration testing walkthroughs with verified flags and source PDFs.">
+    <meta property="og:image" content="Images/profile.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128273;</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        (function () {
+            try {
+                var savedTheme = localStorage.getItem('theme') || 'red';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body>
+    <!-- Visual Overlays -->
+    <div class="scanlines" id="scanlines" aria-hidden="true"></div>
+    <div class="crt-glow" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+    <div class="particles" id="particles-js"></div>
+    <canvas id="matrixCanvas" class="matrix-canvas" hidden></canvas>
+
+    <!-- Top Command Telemetry Ticker -->
+    <header class="top-telemetry">
+        <div class="telemetry-inner">
+            <div class="telemetry-item live-pulse">
+                <span class="pulse-dot"></span>
+                <span class="telemetry-label">SYSTEM:</span>
+                <span class="telemetry-val">WRITEUP PORTAL // ONLINE</span>
+            </div>
+            <div class="telemetry-item">
+                <i class="fas fa-trophy highlight-gold"></i>
+                <span class="telemetry-label">THM LEAGUES:</span>
+                <span class="telemetry-val">#1 SAPPHIRE &amp; RUBY | #2 IN NEPAL (AUG 2026)</span>
+            </div>
+            <div class="telemetry-item">
+                <i class="fas fa-shield-halved"></i>
+                <span class="telemetry-label">STATUS:</span>
+                <span class="telemetry-val">31 VERIFIED MODULES LOADED</span>
+            </div>
+            <div class="telemetry-item hide-mobile">
+                <i class="fas fa-terminal"></i>
+                <span class="telemetry-label">CLI:</span>
+                <span class="telemetry-val">PRESS <kbd>`</kbd> OR <kbd>/</kbd></span>
+            </div>
+            <div class="telemetry-item">
+                <i class="fas fa-location-crosshairs"></i>
+                <span class="telemetry-val">KATHMANDU, NP</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="layout-container">
+        <!-- Tactical Left Navigation -->
+        <nav class="left-nav" id="leftNav">
+            <div class="logo">
+                <a href="index.html" class="logo-link">
+                    <span class="logo-prompt">#</span><span class="logo-name" data-text="sameekey">sameekey</span>
+                    <span class="cursor-blink"></span>
+                </a>
+            </div>
+
+            <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+                <span class="nav-toggle-text">NAV</span>
+            </button>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html#about"><i class="fas fa-user-secret"></i> <span>[01] Whoami</span></a></li>
+                <li><a href="index.html#achievements"><i class="fas fa-award"></i> <span>[02] Proof</span></a></li>
+                <li><a href="index.html#skills"><i class="fas fa-microchip"></i> <span>[03] Arsenal</span></a></li>
+                <li><a href="index.html#assessments"><i class="fas fa-crosshairs"></i> <span>[04] Ops &amp; Reports</span></a></li>
+                <li><a href="writeups.html" class="active"><i class="fas fa-scroll"></i> <span>[05] Writeups</span> <span class="nav-badge" id="navWriteupCount">31</span></a></li>
+                <li><a href="projects.html"><i class="fas fa-microchip"></i> <span>[06] Projects</span> <span class="nav-badge">8</span></a></li>
+                <li><a href="index.html#resume"><i class="fas fa-file-shield"></i> <span>[07] Dossier</span></a></li>
+            </ul>
+
+            <!-- Quick HUD Controllers -->
+            <div class="nav-hud-controls">
+                <button class="hud-btn" id="cliLaunchBtn" type="button" title="Open Interactive CLI Terminal (Hotkey: `)">
+                    <i class="fas fa-terminal"></i> <span>CLI [~]</span>
+                </button>
+                <button class="hud-btn" id="sfxToggleBtn" type="button" title="Toggle Cyber Audio Synthesizer (Hotkey: S)">
+                    <i class="fas fa-volume-xmark"></i> <span>SFX: OFF</span>
+                </button>
+                <div class="theme-picker-wrap">
+                    <button class="hud-btn theme-btn" id="themePickerBtn" type="button" title="Change Cyberpunk Palette (Hotkey: T)">
+                        <i class="fas fa-palette"></i> <span>Theme</span>
+                    </button>
+                    <div class="theme-dropdown" id="themeDropdown">
+                        <button class="theme-opt" data-set-theme="red"><span class="swatch red"></span> Blood Red</button>
+                        <button class="theme-opt" data-set-theme="green"><span class="swatch green"></span> Matrix Green</button>
+                        <button class="theme-opt" data-set-theme="cyan"><span class="swatch cyan"></span> Cyber Cyan</button>
+                        <button class="theme-opt" data-set-theme="gold"><span class="swatch gold"></span> Hacker Amber</button>
+                        <button class="theme-opt" data-set-theme="light"><span class="swatch light"></span> Stealth Light</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Links -->
+            <div class="social-links">
+                <a href="https://github.com/Samik-Parajuli" target="_blank" rel="noopener" title="GitHub /Samik-Parajuli" aria-label="GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://www.linkedin.com/in/sameek-parajuli-753b9a30a/" target="_blank" rel="noopener" title="LinkedIn /sameek-parajuli" aria-label="LinkedIn">
+                    <i class="fab fa-linkedin-in"></i>
+                </a>
+                <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" title="TryHackMe /sameekey" aria-label="TryHackMe">
+                    <i class="fas fa-shield-cat"></i>
+                </a>
+                <a href="https://www.instagram.com/sameekey/" target="_blank" rel="noopener" title="Instagram /sameekey" aria-label="Instagram">
+                    <i class="fab fa-instagram"></i>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Surface -->
+        <main class="main-content">
+            <!-- Breadcrumb Navigation Bar -->
+            <div class="terminal-bar" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                    <span class="term-title">sameekey@kali: ~/writeups$ ls -la</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <a href="index.html" class="cyber-btn ghost small">
+                        <i class="fas fa-arrow-left"></i> Return to Main Terminal
+                    </a>
+                    <a href="index.html#assessments" class="cyber-btn accent small">
+                        <i class="fas fa-crosshairs"></i> Flagship Pentest Reports
+                    </a>
+                    <a href="projects.html" class="cyber-btn primary small">
+                        <i class="fas fa-microchip"></i> Projects Workstation
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section Header -->
+            <section id="writeups" class="section" style="padding-top: 0;">
+                <div class="section-header">
+                    <div class="section-tag">// ARCHIVE DIRECTORY</div>
+                    <h1 class="term-heading" style="font-size: 2.2rem;">CTF Walkthroughs &amp; Research Index</h1>
+                    <p class="section-sub">
+                        <span id="writeupCountLive">31</span> comprehensive security walkthroughs rendered directly from source markdown.
+                        Every lab contains verified flags, reproducible commands, exploit methodology, and remediation analysis.
+                    </p>
+                </div>
+
+                <!-- Stats HUD Row -->
+                <div class="stat-hud-grid" style="margin-bottom: 2rem;">
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-folder-tree"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val" id="statWriteups">31</span>
+                            <span class="hud-stat-label">Published Walkthroughs</span>
+                        </div>
+                    </div>
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val">#1</span>
+                            <span class="hud-stat-label">Sapphire &amp; Ruby League</span>
+                        </div>
+                    </div>
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-hotel"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val">14 / 14</span>
+                            <span class="hud-stat-label">Byte Lotus Exploitation</span>
+                        </div>
+                    </div>
+                    <div class="hud-stat-card">
+                        <div class="hud-stat-icon"><i class="fas fa-file-pdf"></i></div>
+                        <div class="hud-stat-content">
+                            <span class="hud-stat-val">28+</span>
+                            <span class="hud-stat-label">Verified Original PDFs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GitHub Remote Synchronizer Hub -->
+                <div class="github-command-hub" data-aos="fade-up" style="margin-bottom: 2rem;">
+                    <div class="gh-hub-header">
+                        <div class="gh-hub-title-group">
+                            <i class="fab fa-github gh-hub-icon"></i>
+                            <div>
+                                <h3 class="gh-hub-title">TryHackMe Walkthroughs Remote Repository</h3>
+                                <p class="gh-hub-desc">All 30+ offensive writeups, laboratory proofs, and methodology guides are synchronized live on GitHub.</p>
+                            </div>
+                        </div>
+                        <div class="gh-hub-actions">
+                            <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener" class="cyber-btn primary small">
+                                <i class="fab fa-github"></i> Star &amp; Explore Repo
+                            </a>
+                        </div>
+                    </div>
+                    <div class="gh-clone-bar">
+                        <span class="gh-clone-prompt">$</span>
+                        <code class="gh-clone-code" id="ghCloneCommand">git clone https://github.com/Samik-Parajuli/tryhackme_walkthroughs.git</code>
+                        <button class="cyber-btn ghost small copy-clone-btn" id="copyGhCloneBtn" type="button" title="Copy git clone command">
+                            <i class="fas fa-copy"></i> <span>Copy Clone</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Writeup Multi-Filter Controls Container -->
+                <div class="writeup-controls-container" id="writeupControlsContainer">
+                    <div class="search-and-view-row">
+                        <div class="search-box">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="search" id="writeupSearch" placeholder="grep writeups (e.g. TOCTOU, WMI, SQLi, KAPE)... [Hotkey: /]" aria-label="Search writeups" autocomplete="off">
+                            <span class="search-kbd-hint"><kbd>/</kbd></span>
+                        </div>
+
+                        <div class="view-and-sort-controls">
+                            <!-- Sort Selector -->
+                            <div class="sort-select-wrap">
+                                <label for="writeupSort" class="control-label"><i class="fas fa-sort"></i> Sort:</label>
+                                <select id="writeupSort" class="cyber-select">
+                                    <option value="date-desc">Newest First</option>
+                                    <option value="diff-desc">Difficulty (Hard &rarr; Easy)</option>
+                                    <option value="diff-asc">Difficulty (Easy &rarr; Hard)</option>
+                                    <option value="time-desc">Reading Time (Longest)</option>
+                                    <option value="title-asc">Title (A &rarr; Z)</option>
+                                </select>
+                            </div>
+
+                            <!-- Layout Toggle: Cards vs Terminal List -->
+                            <div class="layout-toggle-group">
+                                <button class="layout-btn active" id="viewGridBtn" type="button" title="Card Grid View">
+                                    <i class="fas fa-table-cells-large"></i>
+                                </button>
+                                <button class="layout-btn" id="viewListBtn" type="button" title="Compact Terminal List View">
+                                    <i class="fas fa-list-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Pills -->
+                    <div class="filter-pills-row">
+                        <span class="filter-label"><i class="fas fa-filter"></i> Category:</span>
+                        <div class="filter-chips" id="writeupFilters"></div>
+                    </div>
+
+                    <!-- Difficulty Quick Filter -->
+                    <div class="difficulty-pills-row">
+                        <span class="filter-label"><i class="fas fa-gauge-high"></i> Difficulty:</span>
+                        <div class="diff-chips" id="diffFilters">
+                            <button class="diff-chip active" data-diff="all" type="button">All Difficulties</button>
+                            <button class="diff-chip" data-diff="Easy" type="button"><span class="dot-diff easy"></span> Easy</button>
+                            <button class="diff-chip" data-diff="Medium" type="button"><span class="dot-diff medium"></span> Medium</button>
+                            <button class="diff-chip" data-diff="Hard" type="button"><span class="dot-diff hard"></span> Hard</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Grid View -->
+                <div class="card-grid" id="writeupsGrid"></div>
+
+                <!-- Compact Terminal List View -->
+                <div class="terminal-list-view" id="writeupsListView" hidden>
+                    <div class="terminal-table-header">
+                        <span class="col-status">TYPE</span>
+                        <span class="col-title">WALKTHROUGH TITLE</span>
+                        <span class="col-cat">CATEGORY</span>
+                        <span class="col-diff">DIFFICULTY</span>
+                        <span class="col-date">DATE</span>
+                        <span class="col-time">READ</span>
+                        <span class="col-action">EXECUTE</span>
+                    </div>
+                    <div class="terminal-table-body" id="writeupsTableBody"></div>
+                </div>
+
+                <!-- Interactive Pagination Controls -->
+                <div class="pagination-bar" id="writeupPagination">
+                    <button class="pagination-btn" id="paginationPrevBtn" type="button">
+                        <i class="fas fa-chevron-left"></i> PREV
+                    </button>
+                    <div class="pagination-pages" id="paginationPages"></div>
+                    <button class="pagination-btn" id="paginationNextBtn" type="button">
+                        NEXT <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <span class="pagination-info" id="paginationInfo">Page 1 of 6 (31 Total)</span>
+                </div>
+
+                <!-- Empty Search State -->
+                <div class="empty-state" id="writeupsEmpty" hidden>
+                    <div class="empty-icon"><i class="fas fa-terminal"></i></div>
+                    <p class="term-line">
+                        <span class="prompt-user">sameekey@kali</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+                        <span class="prompt-cmd" id="emptyQueryCmd">grep -ri "query" .</span>
+                    </p>
+                    <p class="empty-msg">grep: 0 matches found in writeup directory.</p>
+                    <button class="cyber-btn ghost small" id="resetSearchBtn" type="button">Reset All Filters</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Site Footer -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <p class="footer-cmd">
+                <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+                <span class="prompt-cmd">echo "Defense is good. Offense is mandatory."</span>
+            </p>
+            <div class="footer-socials">
+                <a href="https://github.com/Samik-Parajuli" target="_blank" rel="noopener" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/sameek-parajuli-753b9a30a/" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                <a href="https://tryhackme.com/p/sameekey" target="_blank" rel="noopener" aria-label="TryHackMe"><i class="fas fa-shield-cat"></i></a>
+                <a href="https://www.instagram.com/sameekey/" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            </div>
+            <p class="footer-muted">
+                &copy; <span id="year"></span> Sameek Parajuli &middot; Crafted with raw HTML, CSS &amp; JS &middot; Press <kbd>`</kbd> for CLI Terminal
+            </p>
+        </div>
+    </footer>
+
+    <!-- Interactive Kali CLI Terminal Modal -->
+    <div class="cli-modal-overlay" id="cliModal" hidden>
+        <div class="cli-modal-window">
+            <div class="term-bar">
+                <span class="dot red" id="cliCloseDot"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <span class="term-title">sameekey@kali: ~ (interactive shell)</span>
+                <button class="cli-close-btn" id="cliCloseBtn" type="button" aria-label="Close Terminal">&times;</button>
+            </div>
+            <div class="cli-body" id="cliBody">
+                <div class="cli-welcome">
+                    <pre class="cli-banner">
+  ____    _    __  __ _____ _____ _  _______ __   __
+ / ___|  / \  |  \/  | ____| ____| |/ / ____|\ \ / /
+ \___ \ / _ \ | |\/| |  _| |  _| | ' /|  _|   \ V / 
+  ___) / ___ \| |  | | |___| |___| . \| |___   | |  
+ |____/_/   \_\_|  |_|_____|_____|_|\_\_____|  |_|  
+=====================================================
+[*] SAMEEKEY TACTICAL SHELL v3.4 [x86_64-kali-linux]
+[*] Type 'help' for available commands or 'matrix' for digital rain.
+                    </pre>
+                </div>
+                <div id="cliOutput"></div>
+                <div class="cli-input-line">
+                    <span class="prompt-user">sameekey@kali</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+                    <input type="text" id="cliInput" class="cli-input" autocomplete="off" spellcheck="false" autofocus>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- In-Page Writeup Quick-Reader Modal -->
+    <div class="reader-modal-overlay" id="readerModal" hidden>
+        <div class="reader-modal-window">
+            <div class="term-bar">
+                <span class="dot red" id="readerCloseDot"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <span class="term-title" id="readerModalTitle">Writeup Reader</span>
+                <div class="reader-bar-actions">
+                    <a href="#" id="readerPdfLink" download class="reader-bar-btn" hidden><i class="fas fa-file-pdf"></i> Download PDF</a>
+                    <a href="#" id="readerExternalLink" target="_blank" rel="noopener" class="reader-bar-btn"><i class="fas fa-arrow-up-right-from-square"></i> Standalone Page</a>
+                    <button class="reader-bar-btn" id="readerCloseBtn" type="button">&times;</button>
+                </div>
+            </div>
+            <div class="reader-modal-body" id="readerModalBody">
+                <div class="reader-loading">
+                    <i class="fas fa-circle-notch fa-spin"></i> Loading writeup from encrypted volume...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Scripts -->
+    <script src="writeups/writeups-data.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        if (window.AOS) {
+            AOS.init({
+                duration: 700,
+                easing: 'ease-out-cubic',
+                once: true,
+                offset: 50
+            });
+        }
+    </script>
+</body>
+
+</html>
