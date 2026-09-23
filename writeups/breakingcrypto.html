@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breaking Crypto // writeup</title>
+    <meta name="description" content="Hands-on with weak cryptographic implementations: identifying the cipher, recovering the key and scripting the decryption instead of brute forcing it.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Breaking Crypto</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Cryptography</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-07-30</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Cryptography / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> breakingcrypto.md</span>
+                </div>
+                <p class="writeup-summary">Hands-on with weak cryptographic implementations: identifying the cipher, recovering the key and scripting the decryption instead of brute forcing it.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/breakingcrypto.md" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>Cover Page</h1>
+<p>Documentation Version: 1.0</p>
+<h1>Executive Summary</h1>
+<p>This document presents the walkthrough for the TryHackMe room Breaking Crypto the Simple Way. The objective of the room is to identify and exploit common cryptographic implementation weaknesses, including weak RSA encryption, exposed cryptographic secrets, and insecure JSON Web Token (JWT) implementations. The walkthrough demonstrates the exploitation process and the techniques used to obtain the required flags.</p>
+<h1>Vulnerability Summary</h1>
+<h1>Detail of Technical Findings</h1>
+<h2>Title:</h2>
+<p>Weak RSA Key Generation Leading to Plaintext Recovery</p>
+<h3>Description</h3>
+<p>The application uses an RSA public key generated from weak prime numbers. Since the modulus can be factored, an attacker can reconstruct the private key and decrypt the encrypted message.</p>
+<h3>Impact</h3>
+<ul><li>Sensitive encrypted information can be recovered.</li></ul>
+<ul><li>Attackers may forge encrypted messages.</li></ul>
+<ul><li>No direct impact.</li></ul>
+<h3>Recommendation</h3>
+<ul><li>Generate RSA keys using cryptographically secure random prime numbers.</li></ul>
+<ul><li>Use key sizes of at least 2048 bits.</li></ul>
+<ul><li>Periodically rotate cryptographic keys.</li></ul>
+<h3>Affected Component</h3>
+<p>RSA Encryption Service</p>
+<h3>Severity</h3>
+<h1>Steps of Reproduction</h1>
+<h3>Step 1</h3>
+<p>Configure the target hostname.</p>
+<h3>Step 2</h3>
+<p>Open the application using:</p>
+<p>Verify that the application loads successfully.</p>
+<h3>Step 3</h3>
+<p>Copy the RSA modulus (n) provided by the challenge. Use the recovered values to calculate the RSA private key and decrypt the ciphertext.</p>
+<p>The decrypted output reveals the challenge flag.</p>
+<h2>Title</h2>
+<p>Weak Encryption Key Disclosure</p>
+<h3>Description</h3>
+<p>The application uses an insecure encryption implementation that allows the ciphertext to be decrypted once the key is identified.</p>
+<h3>Impact</h3>
+<ul><li>Protected information becomes readable.</li></ul>
+<ul><li>Attackers can modify encrypted data.</li></ul>
+<h3>Recommendation</h3>
+<ul><li>Use strong encryption keys.</li></ul>
+<ul><li>Store keys securely.</li></ul>
+<ul><li>Never expose cryptographic secrets.</li></ul>
+<h3>Affected Component</h3>
+<p>Encryption Module</p>
+<h3>Severity</h3>
+<h1>Steps of Reproduction</h1>
+<h3>Step 1</h3>
+<p>Locate the encrypted data provided by the application.</p>
+<p>📷 Figure 5: Encrypted application data.</p>
+<h3>Step 2</h3>
+<p>Decrypt the ciphertext using the provided key or script.</p>
+<p>The plaintext contains the required flag.</p>
+<p>📷 Figure 6: Terminal showing the decrypted flag.</p>
+<h2>Title</h2>
+<p>Exposed API Key</p>
+<h3>Description</h3>
+<p>The application exposes an API key through client-side requests.</p>
+<h3>Impact</h3>
+<ul><li>Attackers gain unauthorized access to protected APIs.</li></ul>
+<ul><li>API requests can be forged.</li></ul>
+<ul><li>Possible service abuse.</li></ul>
+<h3>Recommendation</h3>
+<ul><li>Store API keys on the server.</li></ul>
+<ul><li>Never expose secrets in client-side code.</li></ul>
+<ul><li>Rotate compromised API keys.</li></ul>
+<h3>Affected Component</h3>
+<p>Client-side JavaScript</p>
+<h3>Severity</h3>
+<h1>Steps of Reproduction</h1>
+<h3>Step 1</h3>
+<p>Open Developer Tools.</p>
+<p>Navigate to the Network tab.</p>
+<p>Refresh the application.</p>
+<p>Inspect the responses.</p>
+<p>Locate the exposed API key.</p>
+<p>📷 Figure 7: Network tab displaying the exposed API key.</p>
+<h2>Title</h2>
+<p>JWT Role Manipulation</p>
+<h3>Description</h3>
+<p>The application trusts user-controlled JWT claims without properly validating authorization.</p>
+<h3>Impact</h3>
+<ul><li>Unauthorized users gain access to protected information.</li></ul>
+<ul><li>Privilege escalation to administrator.</li></ul>
+<ul><li>Minimal impact.</li></ul>
+<h3>Recommendation</h3>
+<ul><li>Properly verify JWT signatures.</li></ul>
+<ul><li>Never trust client-controlled role values.</li></ul>
+<ul><li>Implement server-side authorization.</li></ul>
+<h3>Affected Component</h3>
+<p>Authentication System</p>
+<h3>Severity</h3>
+<h1>Steps of Reproduction</h1>
+<h3>Step 1</h3>
+<p>Capture the JWT after logging into the application.</p>
+<p>📷 Figure 8: Original JWT token.</p>
+<h3>Step 2</h3>
+<p>Decode the JWT.</p>
+<p>Modify the role value from:</p>
+<p>Re-sign the token using the provided secret.</p>
+<p>Replace the old JWT.</p>
+<p>Refresh the application.</p>
+<p>Administrator access is obtained.</p>
+<p>📷 Figure 9: Modified JWT.</p>
+<p>📷 Figure 10: Administrator dashboard.</p>
+<h1>References</h1>
+<ul><li>TryHackMe – Breaking Crypto the Simple Way Writeup</li></ul>
+<ul><li>FactorDB</li></ul>
+<ul><li>JWT.io</li></ul>
+<h1>Conclusion</h1>
+<p>The room demonstrates how improper cryptographic implementations can completely undermine otherwise secure algorithms. Weak RSA key generation, insecure encryption practices, exposed secrets, and improper JWT validation all allow attackers to compromise sensitive data and escalate privileges. Following secure cryptographic practices and proper server-side validation significantly reduces the risk of these vulnerabilities.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/breakingcrypto.md" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

